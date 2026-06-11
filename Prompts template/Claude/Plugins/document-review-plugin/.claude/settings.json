@@ -16,15 +16,6 @@
             "command": "echo \"[document-review] Review task completed at $(date)\""
           }
         ]
-      },
-      {
-        "matcher": "Agent",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "echo \"[document-review] Review task completed at $(date)\""
-          }
-        ]
       }
     ]
   }
