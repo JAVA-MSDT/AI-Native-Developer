@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(mv \"Skills\" \"commands\")",
+      "Bash(rm -rf \"Hooks\")",
+      "Bash(rm -f \"config.yaml\")"
+    ]
+  }
+}
