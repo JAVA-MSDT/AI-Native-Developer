@@ -1,5 +1,15 @@
 # Few-Shot Contextual Debugging Prompt Template
 
+## Template Category
+
+**Category:**  
+- Few-Shot Prompting  
+- Contextual Debugging & Troubleshooting  
+- Performance Engineering  
+- DevOps & SRE
+
+---
+
 ## Solution Summary
 
 This template uses a **Few-Shot Prompting** approach for technical troubleshooting and debugging. By providing a clear role, rich contextual details (system configuration, logs, environment), explicit instructions and constraints, and an example response, the template ensures the LLM produces structured, actionable, and best-practice-aligned recommendations. This approach is ideal for engineering, DevOps, SRE, or any scenario where context and output format are critical.

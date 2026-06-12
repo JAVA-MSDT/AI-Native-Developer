@@ -1,5 +1,15 @@
 # Role-Based Perspective Prompt Template
 
+## Template Category
+
+**Category:**  
+- Multi-Perspective Content Generation  
+- Role-Based Prompting  
+- Balanced Analysis & Stakeholder Reports  
+- Audience-Tailored Communication
+
+---
+
 ## Solution Summary
 
 This template uses **Role-Based Prompting** to guide an LLM in generating distinct, persona-driven responses on any topic. By assigning clear roles, specifying tone, depth, and structure, and setting constraints, the prompt ensures nuanced, relevant, and audience-tailored outputs. This approach is ideal for multi-perspective articles, balanced analyses, and stakeholder reports.
@@ -70,3 +80,17 @@ You are writing about [TOPIC]. Generate multiple distinct responses, each from a
 - **Role 3:** [Describe focus, tone, and unique insights.]
 
 Role-Based Prompting ensures each perspective is distinct, relevant, and tailored to the target audience, providing a comprehensive view of [TOPIC].
+
+---
+
+**Template Name:** Role-Based Perspective Prompt Template
+
+---
+
+**Is it worth it?**
+
+Yes! This template:
+- Produces nuanced, persona-driven responses that capture distinct stakeholder viewpoints on any topic.
+- Ensures depth and audience alignment through explicit tone, length, and structure controls per role.
+- Ideal for multi-perspective articles, balanced analyses, and stakeholder communication.
+- Is reusable for any topic, target audience, or number of roles.

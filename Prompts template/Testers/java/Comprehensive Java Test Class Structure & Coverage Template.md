@@ -1,5 +1,15 @@
 # Comprehensive Java Test Class Structure & Coverage Template
 
+## Template Category
+
+**Category:**  
+- Java Unit & Integration Testing  
+- Test Class Structure & Coverage  
+- JUnit 5 & AssertJ Best Practices  
+- Mock Setup & Verification
+
+---
+
 ## Template Summary
 
 This template provides a reusable, best-practice structure for writing comprehensive Java test classes. It emphasizes grouping related tests with `@Nested`, clear descriptions with `@DisplayName`, the Given-When-Then pattern, descriptive method names, thorough coverage (happy path, edge cases, errors), fluent assertions, and proper mock setup and verification. Ideal for unit, integration, and regression testing in Java projects.
@@ -61,7 +71,9 @@ This template provides a reusable, best-practice structure for writing comprehen
     ```
 
 ---
-Template Name: Comprehensive Java Test Class Structure & Coverage Template
+
+**Template Name:** Comprehensive Java Test Class Structure & Coverage Template
+
 ---
 
 **Is it worth it?**

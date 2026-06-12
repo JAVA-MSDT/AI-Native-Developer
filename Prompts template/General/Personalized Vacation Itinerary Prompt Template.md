@@ -1,5 +1,15 @@
 # Personalized Vacation Itinerary Prompt Template
 
+## Template Category
+
+**Category:**  
+- Travel Planning & Itinerary Generation  
+- Few-Shot Prompting  
+- Budget-Conscious & Accessible Travel  
+- Personalized Experience Design
+
+---
+
 ## Solution Summary
 
 This prompt uses Few-Shot Prompting by providing structured examples for multiple days, guiding the LLM to generate consistent, constraint-aware itineraries. The explicit role definition ensures expert tone and decision-making, while detailed instructions and output specifications reinforce clarity, logical consistency, and adherence to user constraints. By including budget annotations, transportation details, and accessibility notes, the prompt encourages the LLM to justify choices and match the desired travel style.
@@ -97,3 +107,17 @@ Present the itinerary in a structured, day-by-day format. For each day, include:
 ### Day 2
 
 ... (to be completed by the LLM)
+
+---
+
+**Template Name:** Personalized Vacation Itinerary Prompt Template
+
+---
+
+**Is it worth it?**
+
+Yes! This template:
+- Generates constraint-aware, day-by-day itineraries tailored to budget, travel style, and preferences.
+- Justifies every recommendation with cost estimates, accessibility notes, and reservation flags.
+- Covers all practical travel details: transportation, meals, highlights, accommodation, and local tips.
+- Is reusable for any destination, group size, duration, or travel preference.

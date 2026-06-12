@@ -1,5 +1,15 @@
 # Structured Defect Report Prompt Template (Generate Knowledge Prompting)
 
+## Template Category
+
+**Category:**  
+- Structured Defect Reporting  
+- Generate Knowledge Prompting  
+- QA & Bug Triage  
+- Cross-Team Defect Tracking
+
+---
+
 ## Solution Summary
 
 This template uses **Generate Knowledge Prompting** to guide an LLM, acting as a QA defect analyst, in producing professional, structured defect reports for any feature or scenario. By explicitly defining context, instructions, constraints, and output sections, the template ensures clarity, logical consistency, and actionable communication for engineering teams. It is ideal for QA, triage, and cross-team defect tracking.

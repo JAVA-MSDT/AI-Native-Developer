@@ -1,5 +1,15 @@
 # R.O.S.E.S. System Design & Solution Architecture Prompt Template
 
+## Template Category
+
+**Category:**  
+- System Design & Solution Architecture  
+- R.O.S.E.S. Prompting Framework  
+- AI/ML-Driven Solution Design  
+- Stakeholder-Ready Technical Documentation
+
+---
+
 ## Solution Summary
 
 This template leverages the **R.O.S.E.S. (Recognize, Organize, Suggest, Evaluate, Solve) Prompting Framework** to guide an LLM through a comprehensive, stepwise approach to system design, architecture, and solution analysis. By explicitly structuring the prompt around business context, modular architecture, AI/technique suggestions, trade-off evaluation, and actionable solutions, it ensures thorough, stakeholder-ready outputs for any complex engineering or product scenario.

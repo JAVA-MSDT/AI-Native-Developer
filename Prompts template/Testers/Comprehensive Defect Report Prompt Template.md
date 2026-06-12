@@ -1,5 +1,15 @@
 # Comprehensive Defect Report Prompt Template (with Prompt Components & Few-Shot Example)
 
+## Template Category
+
+**Category:**  
+- Defect Reporting & Bug Documentation  
+- Few-Shot Prompting  
+- QA & Bug Triage  
+- Developer Communication
+
+---
+
 ## Solution Summary
 
 This template uses explicit **Prompt Components** (Instruction, Input Context, Constraints, Output Specification) and a **few-shot example** to guide the LLM in generating structured, developer-ready defect reports. The approach ensures technical accuracy, logical consistency, and professional communication, making it ideal for QA, bug triage, and cross-team collaboration. Few-shot prompting is used to reinforce schema and tone; chain-of-thought can be added for deeper analysis if needed.

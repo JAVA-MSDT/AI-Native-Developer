@@ -69,7 +69,9 @@ Please review all the information and requirements in the provided HTML analysis
 </html>
 ```
 ---
-Template Name: HTML Requirements Refactoring & Implementation Plan Template
+
+**Template Name:** HTML Requirements Refactoring & Implementation Plan Template
+
 ---
 
 **Is it worth it?**

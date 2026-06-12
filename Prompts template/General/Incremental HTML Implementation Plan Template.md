@@ -1,5 +1,15 @@
 # Incremental HTML Implementation Plan Template
 
+## Template Category
+
+**Category:**  
+- HTML Development & Incremental Delivery  
+- Web Development Best Practices  
+- Iterative Review & Verification  
+- Implementation Planning
+
+---
+
 ## Template Summary
 
 This template provides a structured, step-by-step approach for efficiently finalizing HTML deliverables. It is designed to reduce latency and errors by breaking the task into manageable increments, ensuring that each addition is reviewed and context is preserved. The template is reusable for any HTML (or similar markup) project requiring iterative development and verification.

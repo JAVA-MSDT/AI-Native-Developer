@@ -1,5 +1,15 @@
 # Zero-Shot Interview Feedback Generation Template
 
+## Template Category
+
+**Category:**  
+- Zero-Shot Prompting  
+- Interview Feedback Generation  
+- HR & Talent Management  
+- Structured Professional Communication
+
+---
+
 ## Solution Summary
 
 This template uses **Zero-shot Prompting** to guide the LLM in generating structured, professional, and actionable interview feedback. By providing a clear role, explicit context (Job Description, feedback form template, and candidate notes), and strict instructions and constraints, the template ensures the output is always relevant, concise, and aligned with the specific requirements of any interview scenario. This approach is ideal for scalable, high-quality HR feedback generation.

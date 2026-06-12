@@ -1,5 +1,15 @@
 # Chain of Thought Bug Analysis & Remediation Prompt Template
 
+## Template Category
+
+**Category:**  
+- Chain of Thought Prompting  
+- Bug Analysis & Root Cause Investigation  
+- Technical Debugging & Remediation  
+- Performance & System Analysis
+
+---
+
 ## Solution Summary
 
 This template uses the **Chain of Thought Prompting** technique to guide an LLM through structured, step-by-step analysis of complex bugs or performance issues. By explicitly breaking down the investigation into logical stages (e.g., log interpretation, artifact analysis, correlation, and remediation), the template ensures thorough, evidence-based, and actionable outputs. This approach is ideal for debugging, root cause analysis, and non-invasive remediation in any technical domain.

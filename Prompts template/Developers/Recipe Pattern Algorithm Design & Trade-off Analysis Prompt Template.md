@@ -1,5 +1,15 @@
 # Recipe Pattern Algorithm Design & Trade-off Analysis Prompt Template
 
+## Template Category
+
+**Category:**  
+- Recipe Prompting Pattern  
+- Algorithm Design & Comparison  
+- Trade-off Analysis & Decision Support  
+- Technical Problem Solving
+
+---
+
 ## Solution Summary
 
 This template uses the **Recipe Prompting Pattern** (with Zero-shot or Chain-of-Thought instructions as needed) to guide an LLM in generating multiple alternative solutions to a technical problem, analyzing their trade-offs, and recommending the best fit for real-world scenarios. It is ideal for algorithm design, optimization, or architectural decision-making where structured comparison and practical recommendations are required.

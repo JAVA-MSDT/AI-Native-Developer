@@ -1,5 +1,15 @@
 # Explicit Errors Identification and Correction Prompt Template
 
+## Template Category
+
+**Category:**  
+- Proofreading & Text Correction  
+- Explicit Errors Prompting Pattern  
+- Grammar, Spelling & Logic Checking  
+- Educational & Editorial Tools
+
+---
+
 ## Solution Summary
 
 This template operationalizes the **Explicit Errors Prompting Pattern** in a stepwise, Chain-of-Thought manner: for each sentence, the LLM (1) identifies errors, (2) highlights the error span using [brackets], (3) explains the issue, and (4) provides a corrected version. The template includes cues to check for grammar, spelling, punctuation, logic, and subtle issues (e.g., tense, modifiers, homophones). This structured approach ensures clarity, actionable feedback, and preservation of the original meaning, making it ideal for proofreading, editing, and educational use.
@@ -42,3 +52,17 @@ You are an expert proofreader. Review the following text for grammatical, spelli
 ## Final Corrected Text
 
 [Paste the fully corrected version of the text here.]
+
+---
+
+**Template Name:** Explicit Errors Identification and Correction Prompt Template
+
+---
+
+**Is it worth it?**
+
+Yes! This template:
+- Provides systematic, sentence-level error analysis with clearly highlighted error spans.
+- Preserves the original meaning while correcting grammar, spelling, punctuation, and logic.
+- Delivers structured, actionable corrections that are easy for any reader to follow.
+- Is ideal for proofreading, editorial review, and educational feedback scenarios.

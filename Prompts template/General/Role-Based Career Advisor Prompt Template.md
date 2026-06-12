@@ -1,5 +1,15 @@
 # Role-Based Career Advisor Prompt Template
 
+## Template Category
+
+**Category:**  
+- Career Guidance & Path Planning  
+- Role-Based Prompting  
+- HR & Workforce Development  
+- Structured Career Recommendations
+
+---
+
 ## Solution Summary
 
 This template applies the **Role-Based Prompt Framework** by assigning the LLM the role of a Career Advisor. It ensures the model delivers structured, empathetic, and context-aware career guidance tailored to an individual’s interests, skills, and constraints. The explicit output format and constraint directives prevent generic advice and ensure actionable, relevant recommendations. This template is ideal for career counseling, student advising, or workforce development scenarios.
@@ -95,5 +105,18 @@ For each career path, use the following structure:
 ---
 
 **Empowering Note:**  
-[LLM generates a supportive,
- encouraging closing note tailored to the student’s journey.]
+[LLM generates a supportive, encouraging closing note tailored to the student’s journey.]
+
+---
+
+**Template Name:** Role-Based Career Advisor Prompt Template
+
+---
+
+**Is it worth it?**
+
+Yes! This template:
+- Delivers structured, empathetic career recommendations aligned to individual skills, interests, and constraints.
+- Ensures actionable next steps with salary ranges and work-life balance for each career path.
+- Prevents generic advice through explicit constraint-checking and a defined output format.
+- Is easily adaptable for any background, skill level, or career stage.

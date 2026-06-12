@@ -1,5 +1,15 @@
 # Structured Error Description Diversity Analysis Prompt Template (Penalty Parameter Sweep)
 
+## Template Category
+
+**Category:**  
+- LLM Output Evaluation & Benchmarking  
+- Zero-Shot Prompting  
+- QA Automation & Error Analysis  
+- Diversity & Clarity Metrics
+
+---
+
 ## Solution Summary
 
 This template uses a **Zero-shot Prompting** approach with explicit, structured instructions and formatting constraints. It is designed for evaluating how different frequency and presence penalty settings affect the diversity, clarity, and usefulness of LLM-generated error descriptions. The template ensures reproducibility by requiring per-run sections, concrete diversity metrics, and a comparative assessment, making it ideal for QA automation, prompt engineering, and LLM evaluation tasks.

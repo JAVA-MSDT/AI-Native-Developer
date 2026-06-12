@@ -132,11 +132,14 @@ Write a welcoming, brand-aligned opening message.
 
 ---
 
+---
+
 **Template Name:** Recommendation System Prompt Template
 
-**Category:** Recommendation Systems / Conversational AI / Domain-Specific Chatbot Design / Advanced Prompt Engineering / Safety & Hallucination Control
+---
 
-**Is it worth it?**  
+**Is it worth it?**
+
 Yes! This template:
 - Enables consistent, safe, and high-quality recommendations.
 - Supports best practices in conversational AI and domain-specific chatbots.

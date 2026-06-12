@@ -1,5 +1,15 @@
 # Few-Shot Functional Test Case Generation Prompt Template (Payment Gateway Example)
 
+## Template Category
+
+**Category:**  
+- Test Case Generation  
+- Few-Shot Prompting  
+- QA & Regression Testing  
+- Test Automation & Coverage
+
+---
+
 ## Solution Summary
 
 This template uses **Few-Shot Prompting** to guide an LLM in generating detailed, execution-ready functional test cases for any feature or module. By providing comprehensive example test cases with strict formatting and domain context, the template ensures the LLM produces consistent, logically complete, and actionable test cases for unexplored scenarios. Few-shot prompting establishes clear guardrails for structure, depth, and coverage, making it ideal for QA, regression testing, and automation.

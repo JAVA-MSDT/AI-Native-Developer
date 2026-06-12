@@ -1,5 +1,15 @@
 # Comprehensive Requirements Analysis & Incremental Implementation Template
 
+## Template Category
+
+**Category:**  
+- Requirements Analysis & Edge Case Coverage  
+- Incremental Implementation Planning  
+- Risk Assessment & Code Impact Analysis  
+- Code Review & Feature Planning
+
+---
+
 ## Template Summary
 
 This template is designed for intensive and comprehensive analysis of any set of requirements, with a focus on edge cases, risk assessment, and incremental implementation planning. It is structured to be reusable for code reviews, feature planning, or architectural changes, and includes clear instructions, stepwise breakdowns, and actionable findings. The template also supports incremental HTML output or similar deliverables.
