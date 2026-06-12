@@ -19,6 +19,7 @@ You are a presentation design specialist. Generate a visually appealing, logical
 - **Description:** [Insert a brief description of the presentation’s purpose, goals, and main message]  
 - **Audience:** [Insert audience type, e.g., executives, students, technical team, general public]  
 - **Guiding Points:** [Insert any specific points, objectives, or areas to emphasize]
+- **Presentation format:** [PowerPoint with default aspect ration 16:9 per slide, HTML, Markdown, etc]
 
 **Instructions:**
 - Structure the presentation with a clear flow: title slide, agenda, main sections, summary/conclusion.
