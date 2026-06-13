@@ -1,0 +1,94 @@
+You are executing the `/approve-step` workflow. Follow every step in order.
+
+## Step 1 — Read State
+
+Read `.claude/state/workflow_state.json`.
+
+If the file does not exist, stop and tell the user: "No active analysis found. Run `/start-ticket-analysis` first."
+
+Extract: `implementation_plan`, `current_step`, `completed_steps`, `codebase_path`, `git_commits`, `phase`, `test_command`.
+
+## Step 2 — Determine Which Step to Execute
+
+- If a step number was passed as an argument, use it.
+- Otherwise, use `current_step + 1`. If `current_step` is 0, this is step 1.
+
+Look up the step in `implementation_plan` by its `step` number.
+
+If the step number is beyond the last step in the plan, tell the user: "All N implementation steps are complete. Review your changes with `git log`."
+
+## Step 3 — Show Step Details and Confirm
+
+Display:
+```
+Step N: <title>
+Description: <description>
+Files to modify: <files list>
+Test command: <test_command>
+Commit message: <commit_message>
+```
+
+Ask: "Proceed with this step? (yes / no / show me the files first)"
+
+If the user says "show me the files first", read each file and show the relevant sections, then ask again.
+
+Wait for explicit confirmation before proceeding. Do not assume yes.
+
+## Step 4 — Implement the Step
+
+Using the `files` list from the step plan:
+
+1. Read each file first (always read before editing)
+2. Make only the changes described in the step `description`
+3. Use Edit to make targeted changes — do not rewrite whole files unless necessary
+4. **Do NOT** alter, refactor, or clean up code outside the declared scope
+5. **Do NOT** implement any part of the next step
+
+## Step 5 — Run Tests
+
+Determine the test command to use (in priority order):
+1. The step's own `test_command` field (if defined and non-empty)
+2. The project-level `test_command` from `workflow_state.json` (if set)
+3. Ask the user: "What command should I run to verify this step?"
+
+Run the resolved test command from `codebase_path`.
+
+**If tests fail:**
+- Show the full failure output
+- Ask: "Tests failed. Options: (1) Fix and retry, (2) Skip tests and commit anyway, (3) Rollback this step. What would you like to do?"
+- Do NOT auto-proceed or auto-commit on failure
+
+**If tests pass:**
+- Show a summary of passing results
+
+## Step 6 — Commit
+
+If tests passed (or user chose option 2):
+
+```bash
+git add <files from this step — list them explicitly, not -A>
+git commit -m "<commit_message from plan>"
+```
+
+Capture the commit hash from the output (it appears in the git commit response).
+
+## Step 7 — Update State
+
+Update `.claude/state/workflow_state.json`:
+- Set `phase` to `"implementation"`
+- Set `current_step` to the step number just completed
+- Append to `completed_steps`:
+  ```json
+  { "step": N, "title": "<title>", "commit": "<hash>" }
+  ```
+- Append the commit hash to `git_commits`
+
+## Step 8 — Present to User
+
+Show:
+1. Step N completed
+2. Commit hash
+3. Brief test results summary
+
+If more steps remain: "Use `/approve-step` to continue with step N+1: `<next step title>`."
+If all steps complete: "All implementation steps complete. Use `git log` to review. Use `/rollback-step` if any step needs to be reverted."
