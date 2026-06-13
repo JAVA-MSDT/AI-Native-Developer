@@ -2,11 +2,11 @@ You are executing the `/submit-review-feedback` workflow. Follow every step in o
 
 ## Step 1 — Read State
 
-Read `.claude/state/workflow_state.json`.
+Read the active state file. First read `<codebase_path>/.dev-workflow/active_state.json` to find the current state file path. If `active_state.json` does not exist, look for any `*_state.json` file in `.dev-workflow/` and use the most recently modified one.
 
-If the file does not exist, stop and tell the user: "No active analysis found. Run `/start-ticket-analysis` first."
+If no state file is found, stop and tell the user: "No active analysis found. Run `/start-ticket-analysis` first."
 
-Extract: `report_path`, `codebase_path`, `implementation_plan`, `review_iterations`.
+Read the state file and extract: `report_path`, `codebase_path`, `implementation_plan`, `review_iterations`, `state_path`.
 
 ## Step 2 — Collect Findings
 
@@ -38,11 +38,11 @@ Changes to make:
 - Update the relevant sections with the new analysis
 - Mark previously open questions as ✅ Resolved or ❌ Unresolved
 - Add any new open questions discovered during re-analysis
-- If the implementation plan changed, update Section 4 in full and update the `implementation_plan` in `workflow_state.json`
+- If the implementation plan changed, update Section 4 in full and update the `implementation_plan` in the state file
 
 ## Step 6 — Update State
 
-Update `.claude/state/workflow_state.json`:
+Update the state file at `state_path`:
 - Increment `review_iterations` by 1
 - If implementation plan changed, overwrite `implementation_plan` with the updated array
 

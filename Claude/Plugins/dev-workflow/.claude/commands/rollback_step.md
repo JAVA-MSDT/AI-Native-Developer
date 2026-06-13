@@ -2,11 +2,11 @@ You are executing the `/rollback-step` workflow. Follow every step in order.
 
 ## Step 1 — Read State
 
-Read `.claude/state/workflow_state.json`.
+Read the active state file. First read `<codebase_path>/.dev-workflow/active_state.json` to find the current state file path. If `active_state.json` does not exist, look for any `*_state.json` file in `.dev-workflow/` and use the most recently modified one.
 
-If the file does not exist, stop and tell the user: "No active workflow found. Nothing to rollback."
+If no state file is found, stop and tell the user: "No active workflow found. Nothing to rollback."
 
-Extract: `completed_steps`, `git_commits`, `current_step`.
+Extract: `completed_steps`, `current_step`, `state_path`.
 
 If `completed_steps` is empty, stop and tell the user: "No completed steps to rollback."
 
@@ -61,10 +61,9 @@ Once the user confirms:
 
 ## Step 7 — Update State
 
-Update `.claude/state/workflow_state.json`:
+Update the state file at `state_path`:
 - Remove the rolled-back step from `completed_steps`
 - Set `current_step` to the step number before the rolled-back step (or 0 if it was step 1)
-- Remove the original commit hash from `git_commits`
 - Add a `rollbacks` array (or append to it) with:
   ```json
   { "step": N, "original_commit": "<hash>", "revert_commit": "<revert_hash>" }

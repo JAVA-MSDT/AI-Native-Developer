@@ -37,7 +37,25 @@ Use the provided text directly as the requirements. Parse it for acceptance crit
 
 In all cases, if the content is ambiguous or acceptance criteria are not clearly identifiable, note this as an open question in the report.
 
-## Step 3 — Explore the Codebase
+## Step 3 — Derive File Names
+
+From the ticket title (or first sentence of pasted text), generate a short slug:
+- Lowercase the title
+- Replace spaces and special characters with hyphens
+- Strip leading/trailing hyphens
+- Truncate to 40 characters max
+
+Build the file prefix:
+- JIRA ticket: `<ticket-id>_<slug>` (e.g., `PROJ-123_add-token-refresh`)
+- URL source: `url_<slug>` (e.g., `url_add-status-command`)
+- Pasted text: `pasted_<slug>` (e.g., `pasted_add-status-command`)
+
+Report file: `<prefix>.<ext>` (e.g., `PROJ-123_add-token-refresh.html`)
+State file: `<prefix>_state.json` (e.g., `PROJ-123_add-token-refresh_state.json`)
+
+Both files will live in `<codebase_path>/.dev-workflow/`.
+
+## Step 4 — Explore the Codebase
 
 Using Read, Glob, and Grep on `codebase_path`:
 
@@ -49,7 +67,7 @@ Using Read, Glob, and Grep on `codebase_path`:
    - Trace callsites and dependencies
 3. Document: affected files, functions, modules, and any third-party dependencies touched.
 
-## Step 4 — Build the Implementation Plan
+## Step 5 — Build the Implementation Plan
 
 Create a numbered, ordered list of self-contained implementation steps. Each step must:
 - Have one clear, single purpose
@@ -69,22 +87,33 @@ Represent each step as a JSON object:
 }
 ```
 
-## Step 5 — Generate the Report
+## Step 6 — Create the State Directory
 
-Ensure `.claude/state/` directory exists:
+Create `<codebase_path>/.dev-workflow/` if it does not exist:
 ```bash
-mkdir -p .claude/state
+mkdir -p "<codebase_path>/.dev-workflow"
 ```
 
-Write the report to:
-- `.claude/state/analysis_report.html` if output_format is `html`
-- `.claude/state/analysis_report.md` if output_format is `md`
+Then tell the user:
+> "Created `.dev-workflow/` in your project root. Add this to your `.gitignore` to avoid committing session state:
+> ```
+> .dev-workflow/
+> ```"
+
+Check if `<codebase_path>/.gitignore` exists. If it does and `.dev-workflow/` is not already listed, offer:
+> "Would you like me to add `.dev-workflow/` to your `.gitignore` automatically? (yes / no)"
+
+If yes, append `.dev-workflow/` to the `.gitignore` file.
+
+## Step 7 — Generate the Report
+
+Write the report to `<codebase_path>/.dev-workflow/<prefix>.<ext>`.
 
 ### HTML Report Structure
 
 A complete, self-contained HTML file with inline CSS. Include:
 
-- **Header**: Ticket ID, title, date generated
+- **Header**: Ticket ID (or source type), title, date generated
 - **Section 1 — Ticket Summary**: Requirements and acceptance criteria listed clearly
 - **Section 2 — Codebase Analysis**: Table of affected files with their role and how they're impacted
 - **Section 3 — Risk Assessment**: Risks color-coded by severity (green = low, yellow = medium, red = high/breaking)
@@ -97,27 +126,34 @@ Use clean inline CSS: dark header, white body, code blocks with light gray backg
 
 Use `##` headings, tables for affected files, fenced code blocks for file paths and snippets.
 
-## Step 6 — Persist State
+## Step 8 — Persist State
 
-Write `.claude/state/workflow_state.json`:
+Write `<codebase_path>/.dev-workflow/<prefix>_state.json`:
 ```json
 {
   "phase": "review",
   "ticket_source": "<jira_id | url | 'pasted'>",
   "ticket_id": "<id if jira, else null>",
+  "file_prefix": "<prefix>",
   "codebase_path": "<path>",
   "output_format": "<html|md>",
   "test_command": "<project test command, or null if not provided>",
-  "report_path": ".claude/state/analysis_report.<ext>",
-  "implementation_plan": [<array of step objects from Step 4>],
+  "report_path": "<codebase_path>/.dev-workflow/<prefix>.<ext>",
+  "state_path": "<codebase_path>/.dev-workflow/<prefix>_state.json",
+  "implementation_plan": [<array of step objects from Step 5>],
   "current_step": 0,
   "completed_steps": [],
-  "git_commits": [],
   "review_iterations": 0
 }
 ```
 
-## Step 7 — Present to User
+Also write a pointer file at `<codebase_path>/.dev-workflow/active_state.json` containing just:
+```json
+{ "state_path": "<codebase_path>/.dev-workflow/<prefix>_state.json" }
+```
+This allows other commands to find the current active analysis without knowing the prefix.
+
+## Step 9 — Present to User
 
 Show:
 1. A 3–5 bullet summary of the most important findings

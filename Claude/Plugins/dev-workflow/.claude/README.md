@@ -174,36 +174,29 @@ Claude will ask for:
 
 ### Using This Plugin in Another Project
 
-The plugin is project-agnostic. It analyzes whatever codebase you point it at.
-
-**Option A — Copy the plugin alongside your project**
+The plugin is a self-contained Claude Code project. You open it in its own directory and point it at whichever project you want to analyze. **It never touches the target project's `.claude/` configuration** — this means it can sit alongside any other Claude Code plugins or project settings without conflict.
 
 ```
-your-project/
-├── src/
-├── tests/
-├── package.json
-└── dev-workflow/        ← copy the plugin here
-    ├── CLAUDE.md
-    └── .claude/
+dev-workflow/          ← open Claude Code here
+  .claude/             ← plugin's own commands, agents, settings
+  CLAUDE.md
+
+your-project/          ← passed as codebase_path
+  src/
+  .claude/             ← your project's own config — untouched
+  .dev-workflow/       ← state and reports written here by the plugin
 ```
 
-Open Claude Code with `dev-workflow/` as the working directory, then pass your project root as `codebase_path`:
+Open Claude Code in the `dev-workflow/` directory, then provide your project path when prompted:
 ```
-/start-ticket-analysis codebase_path=../  test_command="npm test"
-```
-
-**Option B — Copy `.claude/` directly into your project**
-
-If you want the commands available while working inside your project:
-
-```bash
-cp -r dev-workflow/.claude your-project/.claude
+/start-ticket-analysis
+  codebase_path = C:\Projects\your-project
+  test_command  = npm test
 ```
 
-Then open your project in Claude Code normally. The four commands will appear as slash commands.
+The plugin writes all state and reports into `your-project/.dev-workflow/` — not inside itself. Each analysis gets its own named files (`PROJ-123_add-token-refresh.html`, `PROJ-123_add-token-refresh_state.json`), so you can run multiple analyses without overwriting anything.
 
-> **Note:** Add `.claude/state/` to your `.gitignore`. State files are session-specific and should not be committed.
+> **Do not copy `.claude/` into your project.** That would overwrite your project's own Claude Code settings. The plugin is designed to be used as a separate directory.
 
 ### What you need to provide
 
@@ -231,9 +224,11 @@ Use the plugin against its own directory as a self-referential test:
 Expected results:
 - Claude asks for any missing inputs
 - Claude reads files in `.claude/`
-- A report is created at `.claude/state/analysis_report.html`
+- A `.dev-workflow/` folder is created in the codebase path with a gitignore prompt
+- A report is created at `.dev-workflow/pasted_add-status-command.html`
 - The report includes affected files, an implementation plan with at least 1 step, and section headings
-- `.claude/state/workflow_state.json` exists and contains `"phase": "review"`
+- `.dev-workflow/pasted_add-status-command_state.json` exists and contains `"phase": "review"`
+- `.dev-workflow/active_state.json` points to the state file above
 
 **Test the review loop**
 
@@ -247,7 +242,7 @@ Expected:
 - Claude revisits the relevant command/agent files
 - The report gains a "Review Iteration 1" section
 - The open questions or risk sections are updated
-- `workflow_state.json` shows `"review_iterations": 1`
+- The state file shows `"review_iterations": 1`
 
 **Test implementation gating**
 
@@ -258,7 +253,7 @@ Expected:
 Expected:
 - Claude shows step details and asks for confirmation
 - Claude does NOT implement anything until you say yes
-- After implementation, `workflow_state.json` shows `"current_step": 1` and a commit hash in `completed_steps`
+- After implementation, the state file shows `"current_step": 1` and `"commit": "pending"` in `completed_steps`
 
 **Test rollback**
 
@@ -270,7 +265,7 @@ After at least one step is committed:
 Expected:
 - Claude shows which commit will be reverted and asks for confirmation
 - `git log` shows a new revert commit
-- `workflow_state.json` shows `completed_steps` with the rolled-back step removed
+- The state file shows `completed_steps` with the rolled-back step removed
 
 **Verify state persistence**
 
@@ -315,19 +310,37 @@ A `PostToolUse` hook logs a timestamped line to the terminal after every subagen
 
 ### State management
 
-Workflow state is written to `.claude/state/workflow_state.json`. Key fields:
+Workflow state is written to `<codebase_path>/.dev-workflow/`. Each analysis gets its own named files derived from the ticket ID and title:
+
+```
+your-project/.dev-workflow/
+  PROJ-123_add-token-refresh.html          ← analysis report
+  PROJ-123_add-token-refresh_state.json    ← workflow state
+  active_state.json                        ← pointer to current active analysis
+```
+
+Key fields in the state file:
 
 | Field | Description |
 |-------|-------------|
 | `phase` | `review` or `implementation` |
 | `ticket_source` | The original ticket input |
+| `file_prefix` | The slug used for this analysis's filenames |
 | `codebase_path` | The analyzed repo path |
+| `report_path` | Full path to the HTML/MD report |
 | `implementation_plan` | Array of step objects (title, files, test_command, commit_message) |
 | `current_step` | Last completed step number |
-| `completed_steps` | Array of completed steps with commit hashes |
+| `completed_steps` | Array of completed steps with commit status |
 | `review_iterations` | Number of feedback cycles completed |
 
-**To reset:** delete `.claude/state/workflow_state.json`. Back up the report files first if you want to keep them.
+**To start a new analysis:** just run `/start-ticket-analysis` — it creates new files with the new ticket's name. Previous analyses remain in `.dev-workflow/` untouched.
+
+**To reset everything:** delete the `.dev-workflow/` folder from your project root.
+
+**Add to `.gitignore`:** the plugin offers to do this automatically on first run. If you skipped it, add manually:
+```
+.dev-workflow/
+```
 
 ### User advice
 

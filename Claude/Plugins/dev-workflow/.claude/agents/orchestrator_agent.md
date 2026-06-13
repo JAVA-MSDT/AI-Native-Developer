@@ -38,16 +38,18 @@ Each call:
 
 ## State File Contract
 
-Always write `.claude/state/workflow_state.json` with this schema:
+Always write the state file to `<codebase_path>/.dev-workflow/<prefix>_state.json` and keep `active_state.json` pointing to it. Schema:
 ```json
 {
   "phase": "review | implementation",
   "ticket_source": "jira_id | url | pasted",
   "ticket_id": "string | null",
+  "file_prefix": "string",
   "codebase_path": "string",
   "output_format": "html | md",
   "test_command": "string | null",
   "report_path": "string",
+  "state_path": "string",
   "implementation_plan": [
     {
       "step": 1,

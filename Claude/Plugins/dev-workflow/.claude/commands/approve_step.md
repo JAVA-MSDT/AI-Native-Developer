@@ -2,11 +2,11 @@ You are executing the `/approve-step` workflow. Follow every step in order.
 
 ## Step 1 — Read State
 
-Read `.claude/state/workflow_state.json`.
+Read the active state file. First read `<codebase_path>/.dev-workflow/active_state.json` to find the current state file path. If `active_state.json` does not exist, look for any `*_state.json` file in `.dev-workflow/` and use the most recently modified one.
 
-If the file does not exist, stop and tell the user: "No active analysis found. Run `/start-ticket-analysis` first."
+If no state file is found, stop and tell the user: "No active analysis found. Run `/start-ticket-analysis` first."
 
-Extract: `implementation_plan`, `current_step`, `completed_steps`, `codebase_path`, `git_commits`, `phase`, `test_command`.
+Extract: `implementation_plan`, `current_step`, `completed_steps`, `codebase_path`, `phase`, `test_command`, `state_path`.
 
 ## Step 2 — Determine Which Step to Execute
 
@@ -97,7 +97,7 @@ Make the requested changes to the relevant files, then go back to Step 5 (re-run
 
 ## Step 8 — Update State
 
-After the user confirms the implementation looks good (at Step 6), update `.claude/state/workflow_state.json` immediately — do not wait for the commit:
+After the user confirms the implementation looks good (at Step 6), update the state file at `state_path` immediately — do not wait for the commit:
 - Set `phase` to `"implementation"`
 - Set `current_step` to the step number just completed
 - Append to `completed_steps`:
