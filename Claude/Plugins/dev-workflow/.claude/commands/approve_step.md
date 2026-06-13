@@ -46,7 +46,7 @@ Using the `files` list from the step plan:
 
 ## Step 5 — Run Tests
 
-Determine the test command to use (in priority order):
+Determine the test command (in priority order):
 1. The step's own `test_command` field (if defined and non-empty)
 2. The project-level `test_command` from `workflow_state.json` (if set)
 3. Ask the user: "What command should I run to verify this step?"
@@ -55,40 +55,56 @@ Run the resolved test command from `codebase_path`.
 
 **If tests fail:**
 - Show the full failure output
-- Ask: "Tests failed. Options: (1) Fix and retry, (2) Skip tests and commit anyway, (3) Rollback this step. What would you like to do?"
-- Do NOT auto-proceed or auto-commit on failure
+- Diagnose the root cause
+- Propose a fix
+- Ask: "Tests failed. Options: (1) Fix and retry, (2) Skip tests, (3) Rollback this step. What would you like to do?"
+- Do NOT proceed without user input
 
 **If tests pass:**
 - Show a summary of passing results
 
-## Step 6 — Commit
+## Step 6 — Show Implementation Summary and Ask for Review
 
-If tests passed (or user chose option 2):
+Display a summary of what was changed:
+- Which files were created or modified
+- A brief description of the changes made
+- Test results (passed / skipped)
+
+Then ask:
+> "Does the implementation look correct to you? Any changes needed before committing?
+> - Reply **'looks good'** and I'll give you the commit command to run.
+> - Reply with **comments or corrections** and I'll update the code before you commit."
+
+Wait for the user's response. Do not commit automatically.
+
+## Step 7 — Handle Review Response
+
+**If the user says it looks good (or equivalent):**
+
+Show the exact git commands to commit this step:
 
 ```bash
-git add <files from this step — list them explicitly, not -A>
+git add <list each file explicitly — one per line>
 git commit -m "<commit_message from plan>"
 ```
 
-Capture the commit hash from the output (it appears in the git commit response).
+Tell the user:
+> "Run the commands above to commit step N. Once committed, run `/approve-step` to continue with step N+1, or `/rollback-step` if you need to undo this step."
 
-## Step 7 — Update State
+**If the user provides corrections or comments:**
 
-Update `.claude/state/workflow_state.json`:
+Make the requested changes to the relevant files, then go back to Step 5 (re-run tests). Repeat Step 6 after the fix.
+
+## Step 8 — Update State
+
+After the user confirms the implementation looks good (at Step 6), update `.claude/state/workflow_state.json` immediately — do not wait for the commit:
 - Set `phase` to `"implementation"`
 - Set `current_step` to the step number just completed
 - Append to `completed_steps`:
   ```json
-  { "step": N, "title": "<title>", "commit": "<hash>" }
+  { "step": N, "title": "<title>", "commit": "pending" }
   ```
-- Append the commit hash to `git_commits`
 
-## Step 8 — Present to User
+When the user later runs `/approve-step` for the next step, the state will correctly show which step was last worked on.
 
-Show:
-1. Step N completed
-2. Commit hash
-3. Brief test results summary
-
-If more steps remain: "Use `/approve-step` to continue with step N+1: `<next step title>`."
-If all steps complete: "All implementation steps complete. Use `git log` to review. Use `/rollback-step` if any step needs to be reverted."
+> **Note on rollback:** `/rollback-step` uses `git log` to find the relevant commit automatically — you do not need to provide the commit hash manually.

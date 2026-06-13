@@ -52,13 +52,18 @@ You           → Confirm (or ask to show files first)
 
 Claude        → Implements only that step
               → Runs tests
-              → If tests pass: commits with the planned commit message
-              → Reports commit hash and test results
-              → Waits — does NOT auto-proceed to step N+1
+              → Shows you what was changed
+              → Asks: "Does the implementation look correct?"
 
-You           → Review the diff, run your own checks if needed
-              → Run /approve-step again for the next step
-              → OR run /rollback-step if something is wrong
+You           → Review the code
+              → Reply "looks good" OR provide corrections
+
+Claude        → If corrections: fixes the code, re-runs tests, asks again
+              → If looks good: shows the exact git commit command to run
+
+You           → Run the commit command yourself
+              → Run /approve-step for the next step
+              → OR run /rollback-step if something needs to be undone
 
 ROLLBACK  (any time during implementation)
 ─────────────────────────────────────────────────────────────────────

@@ -9,7 +9,7 @@ You need these inputs. If they were not passed as arguments, ask the user for al
   - A URL to a ticket or requirements page — will be fetched via HTTP
   - Plain text / pasted requirements — use directly
 
-- **codebase_path** *(required)*: Path to the codebase root. Do not default to `.` — ask explicitly if not provided.
+- **codebase_path** *(required)*: An absolute or relative directory path (e.g., `C:\Projects\MyApp` or `../myapp`). Do not default to `.` — ask explicitly if not provided. If the user provides something that is not a path (e.g., "yes", "ok", a sentence), reject it and ask again: "That doesn't look like a path. Please provide the directory path to your codebase (e.g., `C:\Projects\MyApp` or `.` for the current directory)."
 
 - **output_format**: `html` or `md` (default: `html`)
 

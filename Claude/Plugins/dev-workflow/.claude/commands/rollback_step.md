@@ -17,12 +17,22 @@ If `completed_steps` is empty, stop and tell the user: "No completed steps to ro
 
 If the requested step is not found in `completed_steps`, tell the user which steps are available to rollback.
 
-## Step 3 — Confirm
+## Step 3 — Find the Commit Hash
+
+The commit hash may be stored in `completed_steps[N].commit`. If it is `"pending"` or missing (because the developer commits manually), find the commit using git log:
+
+```bash
+git log --oneline -10
+```
+
+Match the commit message from the step's `commit_message` field to find the right hash. Show the matches to the user and ask them to confirm which commit to revert if there is ambiguity.
+
+## Step 4 — Confirm
 
 Display:
 ```
 Rollback Step N: <title>
-Commit to revert: <commit hash>
+Commit to revert: <commit hash> — "<commit message>"
 Warning: This creates a revert commit. The original commit stays in git history.
 ```
 
@@ -30,20 +40,26 @@ Ask: "Confirm rollback of step N? (yes / no)"
 
 Wait for explicit confirmation. Do not proceed without it.
 
-## Step 4 — Revert the Commit
+## Step 5 — Provide the Revert Command
+
+Show the user the exact command to run:
 
 ```bash
 git revert <commit_hash> --no-edit
 ```
 
-If git revert produces conflicts:
-- Show the conflicted files
-- Ask: "There are merge conflicts. Would you like me to resolve them, or do you want to handle this manually?"
-- Do not auto-resolve without user input
+Tell the user:
+> "Run the command above. If there are merge conflicts, resolve them then run `git revert --continue`. Come back here when the revert is complete."
 
-Capture the revert commit hash from the output.
+Do not run the revert automatically — let the developer execute it.
 
-## Step 5 — Update State
+## Step 6 — Update State After User Confirms Revert is Done
+
+Ask: "Has the revert been completed?"
+
+Once the user confirms:
+
+## Step 7 — Update State
 
 Update `.claude/state/workflow_state.json`:
 - Remove the rolled-back step from `completed_steps`
@@ -54,7 +70,7 @@ Update `.claude/state/workflow_state.json`:
   { "step": N, "original_commit": "<hash>", "revert_commit": "<revert_hash>" }
   ```
 
-## Step 6 — Present to User
+## Step 8 — Present to User
 
 Show:
 1. Step N reverted successfully
