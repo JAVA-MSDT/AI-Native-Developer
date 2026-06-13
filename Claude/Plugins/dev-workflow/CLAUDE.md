@@ -19,6 +19,7 @@ Automates ticket analysis, iterative review, and step-by-step implementation wit
 /submit-review-feedback  — Re-analyze based on your findings, update report
 /approve-step            — Implement and commit the next step (after review)
 /rollback-step           — Revert the last committed step
+/status                  — Show current workflow state (phase, progress, commits).
 ```
 
 ## Setup
