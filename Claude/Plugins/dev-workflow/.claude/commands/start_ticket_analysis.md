@@ -67,6 +67,29 @@ Using Read, Glob, and Grep on `codebase_path`:
    - Trace callsites and dependencies
 3. Document: affected files, functions, modules, and any third-party dependencies touched.
 
+After the exploration, write a compact snapshot to `<codebase_path>/.dev-workflow/codebase_context.md`:
+
+```markdown
+# Codebase Context
+Generated: <date> | Ticket: <file_prefix>
+
+## Tech Stack
+<detected language, framework, test runner, key dependencies — one line each>
+
+## Relevant File Map
+| File | Purpose | Key symbols |
+|------|---------|-------------|
+| path/to/file | what it does | exported functions / classes |
+
+## Key Patterns
+<architecture patterns, naming conventions, auth approach, DB layer, error handling — bullet points>
+
+## Entry Points
+<files that bootstrap the app, register routes, or are the main execution entry>
+```
+
+This snapshot is the single source of codebase context for all subsequent agents — they read it instead of re-exploring the codebase.
+
 ## Step 5 — Build the Implementation Plan
 
 Create a numbered, ordered list of self-contained implementation steps. Each step must:

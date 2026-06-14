@@ -21,13 +21,15 @@ Read the current report from `report_path` to understand what was already found 
 
 ## Step 4 — Re-analyze Targeted Areas
 
-For each gap or finding the user identified:
+First, load codebase context without re-exploring from scratch:
+1. Read `<codebase_path>/.dev-workflow/codebase_context.md` — this is the codebase snapshot written during initial analysis. Use it as your base understanding of the project structure, patterns, and affected files.
 
-1. Go back to the codebase (`codebase_path`) and do targeted analysis using Read, Glob, and Grep
-2. Find the specific files, functions, or patterns relevant to the gap
-3. Answer open questions where possible
-4. Check if the gap reveals additional affected files or risks not in the previous analysis
-5. Check if the implementation plan needs to be updated (new steps, reordered steps, modified file lists)
+Then for each gap or finding the user identified:
+2. Do targeted reads only — use Glob and Grep to find files **directly related to the specific gap**. Do NOT re-explore the full codebase.
+3. Read only the files and functions relevant to the finding — use the snapshot's file map to go straight to the right place.
+4. Answer open questions where possible.
+5. Check if the gap reveals additional affected files or risks not in the previous analysis.
+6. Check if the implementation plan needs to be updated (new steps, reordered steps, modified file lists).
 
 ## Step 5 — Update the Report
 

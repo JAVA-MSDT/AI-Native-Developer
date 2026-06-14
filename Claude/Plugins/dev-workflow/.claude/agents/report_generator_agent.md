@@ -9,18 +9,18 @@ You are the report generator agent. Your job is to analyze the codebase against 
 
 ## What You Do
 
-### 1. Analyze the Codebase
+### 1. Load Codebase Context
 
-Using Read, Glob, and Grep on `codebase_path`:
+Check if `<codebase_path>/.dev-workflow/codebase_context.md` exists.
 
-For each requirement and acceptance criterion:
-- Use Glob to find relevant files by name patterns related to the feature area
-- Use Grep to find relevant functions, classes, keywords, API endpoints
-- Read the most relevant files to understand the current implementation
-- Trace callsites and dependencies
-- Identify the scope of change needed
+**If it exists (review cycle or re-run):** Read it. Use it as your base understanding of the project structure, tech stack, patterns, and affected files. Only do targeted reads for files specifically mentioned in the requirements that need deeper inspection — do NOT re-explore the full codebase.
 
-Document:
+**If it does not exist (first run):** Explore the codebase fully using Read, Glob, and Grep on `codebase_path`:
+- Map the top-level structure — language, framework, entry points
+- For each requirement and acceptance criterion: use Glob to find relevant files, Grep to find functions/classes/keywords, Read the most relevant files, trace callsites and dependencies
+- Then write the snapshot to `<codebase_path>/.dev-workflow/codebase_context.md` (same format as defined in `start_ticket_analysis.md` Step 4)
+
+In both cases, document:
 - Affected files and the specific functions/classes within them
 - Third-party dependencies or APIs involved
 - Existing patterns in the codebase relevant to the new change
@@ -51,7 +51,7 @@ The implementation plan must be complete — every acceptance criterion must be 
 
 ### 3. Generate the Report
 
-Write the report to the path specified (`.claude/state/analysis_report.html` or `.claude/state/analysis_report.md`).
+Write the report to the path specified by the caller (e.g., `<codebase_path>/.dev-workflow/<prefix>.html` or `<codebase_path>/.dev-workflow/<prefix>.md`).
 
 #### HTML Report
 
@@ -109,7 +109,7 @@ Generated: <date>
 Return:
 ```json
 {
-  "report_path": ".claude/state/analysis_report.<ext>",
+  "report_path": "<codebase_path>/.dev-workflow/<prefix>.<ext>",
   "implementation_plan": [<array of step objects>],
   "open_questions": ["question 1", "question 2"],
   "affected_files_count": N,
