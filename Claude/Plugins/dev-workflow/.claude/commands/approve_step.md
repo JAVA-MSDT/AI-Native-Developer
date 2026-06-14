@@ -108,3 +108,27 @@ After the user confirms the implementation looks good (at Step 6), update the st
 When the user later runs `/approve-step` for the next step, the state will correctly show which step was last worked on.
 
 > **Note on rollback:** `/rollback-step` uses `git log` to find the relevant commit automatically — you do not need to provide the commit hash manually.
+
+## Step 9 — Check for Completion
+
+After updating state, check if the just-completed step is the last step in `implementation_plan` (i.e., `current_step == implementation_plan.length`).
+
+**If this was the last step:**
+
+Update `active_state.json` to signal no active workflow:
+```json
+{ "state_path": null }
+```
+
+Then tell the user:
+
+> "All N implementation steps are complete.
+>
+> - State preserved at `.dev-workflow/<prefix>_state.json` — use `/rollback-step` if you need to revert any step.
+> - Review the full change history with `git log --oneline`.
+> - Run `/start-ticket-analysis` when you're ready for the next ticket."
+
+**If there are more steps remaining:**
+
+Tell the user:
+> "Step N complete. Run `/approve-step` to continue with step N+1."
