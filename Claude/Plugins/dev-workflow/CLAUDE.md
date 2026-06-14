@@ -5,13 +5,17 @@ Automates ticket analysis, iterative review, and step-by-step implementation wit
 ## Features
 
 - Accepts requirements from any source: JIRA ticket ID, URL, or pasted text
-- Analyzes the codebase against requirements and generates a full HTML or Markdown report
-- Names each report after the ticket ID and title slug (e.g., `PROJ-123_add-token-refresh.html`)
+- Optional `scope` parameter limits analysis to specific subdirectories — reduces tokens on large repos
+- Analyzes the codebase and generates a full HTML or Markdown report named after the ticket (e.g., `PROJ-123_add-token-refresh.html`)
+- Writes a `codebase_context.md` snapshot — reused by review iterations to avoid redundant file reads; always regenerated fresh on each new ticket
 - Builds a structured, self-contained implementation plan as part of the report
+- Validates state file integrity on every command — clear error if a previous run failed mid-way
 - Supports unlimited review/feedback iterations — report updates in place
-- Implements code step-by-step with HITL confirmation before each step and before committing
+- Shows `git diff` after each implementation step so review is based on real changes
+- HITL confirmation before each step; developer runs git commands manually — Claude never commits automatically
+- Generates a ready-to-paste PR description when all implementation steps are complete
 - Rollback any step with `git revert` — git history is always preserved
-- Writes state to `<your-project>/.dev-workflow/` — never inside the plugin itself
+- Writes all state and reports to `<your-project>/.dev-workflow/` — never inside the plugin itself
 
 ## Usage
 
@@ -20,6 +24,7 @@ Automates ticket analysis, iterative review, and step-by-step implementation wit
 /submit-review-feedback  — Re-analyze based on your findings, update report
 /approve-step            — Implement the next step and get the commit command
 /rollback-step           — Revert the last committed step
+/status                  — Show current workflow state
 ```
 
 ## How to Use This Plugin

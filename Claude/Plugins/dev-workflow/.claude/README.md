@@ -19,8 +19,9 @@ Claude        → Fetches or reads the requirements
               → Explores the codebase (Glob, Grep, Read)
               → Maps affected files, risks, edge cases
               → Builds a numbered implementation plan
-              → Writes report to .claude/state/analysis_report.html
-              → Saves state to .claude/state/workflow_state.json
+              → Writes codebase snapshot to .dev-workflow/codebase_context.md
+              → Writes report to .dev-workflow/<prefix>.html
+              → Saves state to .dev-workflow/<prefix>_state.json
 
 You           → Open and read the report
               → Identify gaps, unclear areas, missing scenarios
@@ -52,7 +53,7 @@ You           → Confirm (or ask to show files first)
 
 Claude        → Implements only that step
               → Runs tests
-              → Shows you what was changed
+              → Shows git diff of actual changes
               → Asks: "Does the implementation look correct?"
 
 You           → Review the code
@@ -64,6 +65,7 @@ Claude        → If corrections: fixes the code, re-runs tests, asks again
 You           → Run the commit command yourself
               → Run /approve-step for the next step
               → OR run /rollback-step if something needs to be undone
+              → On the last step: receive a ready-to-paste PR description
 
 ROLLBACK  (any time during implementation)
 ─────────────────────────────────────────────────────────────────────
@@ -83,12 +85,17 @@ Claude        → Runs git revert — original commit stays in history
 ## Features
 
 - Accepts requirements from any source: JIRA ticket ID, URL, or pasted text
+- Optional `scope` parameter constrains analysis to specific subdirectories — essential for large repos
 - Analyzes the codebase against requirements and generates a full HTML or Markdown report
+- Writes a `codebase_context.md` snapshot — reused by review iterations to avoid redundant file reads
 - Builds a structured, self-contained implementation plan as part of the report
 - Supports unlimited review/feedback iterations — report updates in place
-- Implements code step-by-step, one commit per step, with HITL confirmation before each
+- Shows `git diff` after each implementation step — review real changes, not Claude's description
+- Implements code step-by-step with HITL confirmation before each step; developer runs git commands manually
+- Generates a ready-to-paste PR description when all steps are complete
 - Rollback any step with `git revert` — git history is always preserved
-- Persists workflow state in `.claude/state/workflow_state.json` — survives session restarts
+- Validates state file integrity on every command — clear error if a previous run failed mid-way
+- Persists workflow state in `<your-project>/.dev-workflow/` — survives session restarts
 
 ---
 
@@ -102,7 +109,7 @@ Claude        → Runs git revert — original commit stays in history
 | Ticket source | JIRA REST API v3, any URL, or plain text |
 | Version control | Git (`git add`, `git commit`, `git revert`) |
 | Report output | Self-contained HTML (inline CSS) or Markdown |
-| State persistence | JSON file (`.claude/state/workflow_state.json`) |
+| State persistence | JSON files in `<your-project>/.dev-workflow/` |
 
 No external packages or build tools required — this is a prompt-only plugin.
 
@@ -152,11 +159,12 @@ Or open it as the root in VS Code / JetBrains with the Claude Code extension.
 
 ### 2. Verify the plugin loads
 
-Type `/` in the Claude Code prompt. You should see all four commands:
+Type `/` in the Claude Code prompt. You should see all five commands:
 - `/start-ticket-analysis`
 - `/submit-review-feedback`
 - `/approve-step`
 - `/rollback-step`
+- `/status`
 
 If any are missing, check that `.claude/commands/` contains the matching `.md` files.
 
@@ -171,6 +179,7 @@ Claude will ask for:
 - **codebase_path** — path to the repo you want analyzed
 - **output_format** — `html` (default) or `md`
 - **test_command** *(optional)* — e.g., `npm test`, `pytest`, `go test ./...`
+- **scope** *(optional)* — comma-separated subdirectories to limit analysis (e.g., `src/auth,src/api`). Omit for full codebase analysis. Use for large repos where the ticket affects a known subsystem.
 
 ### Using This Plugin in Another Project
 
@@ -209,9 +218,11 @@ The plugin writes all state and reports into `your-project/.dev-workflow/` — n
 
 ### Testing the Plugin
 
-**End-to-end smoke test (no real project needed)**
+All tests below use the plugin against its own directory — no external project needed.
 
-Use the plugin against its own directory as a self-referential test:
+---
+
+#### Test 1 — Initial analysis (smoke test)
 
 ```
 /start-ticket-analysis
@@ -221,55 +232,147 @@ Use the plugin against its own directory as a self-referential test:
   test_command  = echo "no tests"
 ```
 
-Expected results:
-- Claude asks for any missing inputs
-- Claude reads files in `.claude/`
-- A `.dev-workflow/` folder is created in the codebase path with a gitignore prompt
-- A report is created at `.dev-workflow/pasted_add-status-command.html`
-- The report includes affected files, an implementation plan with at least 1 step, and section headings
-- `.dev-workflow/pasted_add-status-command_state.json` exists and contains `"phase": "review"`
-- `.dev-workflow/active_state.json` points to the state file above
+**What to verify:**
+- Claude asks for any missing inputs before proceeding
+- Claude does NOT accept "yes" or "ok" as a `codebase_path` — rejects and asks again
+- `.dev-workflow/` folder is created with a `.gitignore` prompt
+- Report created at `.dev-workflow/pasted_add-status-command.html`
+- Report contains: ticket summary, affected files table, risk section, numbered implementation plan, open questions
+- `.dev-workflow/pasted_add-status-command_state.json` exists and contains `"phase": "review"`, `"current_step": 0`, non-empty `implementation_plan`
+- `.dev-workflow/active_state.json` contains `"state_path"` pointing to the state file above
+- `.dev-workflow/codebase_context.md` exists and contains tech stack, file map, and key patterns
 
-**Test the review loop**
+---
 
-After the initial analysis:
+#### Test 2 — Scoped analysis (large repo simulation)
+
+```
+/start-ticket-analysis
+  ticket_source = "Improve error handling in commands"
+  codebase_path = .
+  scope         = .claude/commands
+  output_format = html
+  test_command  = echo "no tests"
+```
+
+**What to verify:**
+- Claude only explores `.claude/commands/` — does not read agent or skill files
+- The snapshot `codebase_context.md` header shows the scope constraint
+- Report's affected files list only contains files under `.claude/commands/`
+
+---
+
+#### Test 3 — Review loop
+
+After Test 1, run:
 ```
 /submit-review-feedback
-  findings = "The report doesn't mention what happens if workflow_state.json is corrupted"
+  findings = "The report doesn't mention what happens if workflow_state.json is corrupted or partially written"
 ```
 
-Expected:
-- Claude revisits the relevant command/agent files
-- The report gains a "Review Iteration 1" section
-- The open questions or risk sections are updated
-- The state file shows `"review_iterations": 1`
+**What to verify:**
+- Claude reads `codebase_context.md` first (not re-exploring from scratch)
+- Claude does targeted reads of only the relevant command files
+- Report gains a `## Review Iteration 1` section near the top
+- Open questions or risk sections are updated
+- State file shows `"review_iterations": 1`
+- `codebase_context.md` is NOT rewritten (it should only be regenerated by `/start-ticket-analysis`)
 
-**Test implementation gating**
+Run a second iteration:
+```
+/submit-review-feedback
+  findings = "Also check how rollback handles the case where git revert has merge conflicts"
+```
+
+**What to verify:**
+- Report gains `## Review Iteration 2`
+- State file shows `"review_iterations": 2`
+
+---
+
+#### Test 4 — State validation
+
+Manually corrupt the state file — open `pasted_add-status-command_state.json` and delete the `codebase_path` field. Then run:
+```
+/approve-step
+```
+
+**What to verify:**
+- Claude stops immediately with a clear error: "The state file is incomplete (missing: `codebase_path`)"
+- Claude does NOT attempt to implement anything
+- Claude tells you to re-run `/start-ticket-analysis`
+
+Restore the field before continuing.
+
+---
+
+#### Test 5 — Implementation with HITL and git diff
 
 ```
 /approve-step
 ```
 
-Expected:
-- Claude shows step details and asks for confirmation
-- Claude does NOT implement anything until you say yes
-- After implementation, the state file shows `"current_step": 1` and `"commit": "pending"` in `completed_steps`
+**What to verify:**
+- Claude shows step details (title, description, files, test command, commit message) and asks "Proceed? (yes / no / show me the files first)"
+- Claude does NOT implement anything until you explicitly say yes
+- After implementation, Claude runs the test command and shows output
+- Claude runs `git diff` and displays the actual diff — not just a description
+- Claude asks "Does the implementation look correct?" before giving the commit command
+- If you say "no" or provide corrections: Claude fixes the code and asks again before giving commit command
+- If you say "looks good": Claude shows explicit `git add <files>` and `git commit -m "..."` commands for you to run — it does NOT commit automatically
+- After you reply "looks good", state file shows `"current_step": 1` and `completed_steps` has `{"step": 1, "commit": "pending"}`
 
-**Test rollback**
+---
 
-After at least one step is committed:
+#### Test 6 — Rollback
+
+After committing step 1 manually (run the git commands Claude provided), run:
 ```
 /rollback-step
 ```
 
-Expected:
-- Claude shows which commit will be reverted and asks for confirmation
-- `git log` shows a new revert commit
-- The state file shows `completed_steps` with the rolled-back step removed
+**What to verify:**
+- Claude reads state and identifies the last completed step
+- Claude shows: step title, commit to revert, and a confirmation prompt
+- Claude does NOT revert automatically — waits for "yes"
+- After confirmation: Claude provides `git revert <hash> --no-edit` for you to run
+- After you confirm the revert is done: state file removes step 1 from `completed_steps`, sets `current_step` to 0
 
-**Verify state persistence**
+---
 
-After any command, close and reopen Claude Code in the same directory. Run `/approve-step`. Claude should read `workflow_state.json` and pick up exactly where you left off, without needing to re-run the analysis.
+#### Test 7 — Completion and PR description
+
+Implement all steps (run `/approve-step` repeatedly, committing each step manually). On the final step:
+
+**What to verify:**
+- After you say "looks good" on the last step: Claude generates a PR description with ticket title, summary, per-step bullets with commit messages, full files-changed list, and test commands
+- `active_state.json` is updated to `{"state_path": null}`
+- Running `/approve-step` again shows "All N steps are complete" — not an error
+
+---
+
+#### Test 8 — Session persistence
+
+After any command mid-workflow, close Claude Code completely. Reopen it in the `dev-workflow/` directory. Run:
+```
+/approve-step
+```
+
+**What to verify:**
+- Claude reads `active_state.json`, finds the state file, and resumes exactly where you left off
+- No need to re-run `/start-ticket-analysis`
+- `/status` shows the current workflow state correctly
+
+---
+
+#### Test 9 — Snapshot staleness protection
+
+Run `/start-ticket-analysis` twice on the same `codebase_path` with different `ticket_source` values.
+
+**What to verify:**
+- Each run deletes and regenerates `codebase_context.md` — never reuses the previous ticket's snapshot
+- The snapshot header shows the new ticket's `file_prefix`
+- `active_state.json` points to the new ticket's state file
 
 ---
 
@@ -317,6 +420,7 @@ your-project/.dev-workflow/
   PROJ-123_add-token-refresh.html          ← analysis report
   PROJ-123_add-token-refresh_state.json    ← workflow state
   active_state.json                        ← pointer to current active analysis
+  codebase_context.md                      ← codebase snapshot (reused by review iterations to avoid re-reading files)
 ```
 
 Key fields in the state file:
@@ -365,7 +469,39 @@ Key fields in the state file:
 **State and sessions**
 
 - **State survives session restarts.** If you close Claude Code mid-workflow, re-open in the same directory and continue.
-- **Don't commit `.claude/state/` to your repo.** State files are session-specific and contain paths and plans that only make sense in your local context.
+- **Don't commit `.dev-workflow/` to your repo.** State files, reports, and the codebase snapshot are session-specific and contain local paths. The plugin offers to add it to `.gitignore` automatically on first run.
+
+---
+
+## Roadmap
+
+### Done — Implemented
+
+| # | What | Status |
+|---|------|--------|
+| 1 | **`git diff` after implementation** | ✅ `approve_step.md` Step 6 now runs `git diff` and displays the full output before asking for review. |
+| 2 | **Snapshot regeneration guarantee** | ✅ Snapshot write moved to Step 6 (after `mkdir`); old `codebase_context.md` deleted before each new run. |
+| 3 | **PR description on completion** | ✅ `approve_step.md` Step 9 generates a copy-ready PR description when all steps complete. |
+| 4 | **State validity check** | ✅ All three commands (`approve_step`, `submit_review_feedback`, `rollback_step`) validate required fields after reading state. |
+| 5 | **Analysis scope parameter** | ✅ Optional `scope` input added to `/start-ticket-analysis`; constrains exploration and snapshot to specified subdirectories. |
+
+### Future — Larger Features
+
+These require more work but would meaningfully extend the plugin's value.
+
+| # | What | Why |
+|---|------|-----|
+| 6 | **`/refresh-snapshot` command** | If you pull significant codebase changes mid-ticket (teammates merging while you're mid-implementation), the snapshot 
+becomes stale. This command re-explores the codebase and rewrites `codebase_context.md` without touching the state file, report, or implementation plan. Run it after any significant pull during an active workflow. |
+| 7 | **`/edit-plan` command** | Common scenario: the report is good but you want to reorder or split steps before implementing. Currently forces a full `/submit-review-feedback` cycle. A direct plan editor removes that friction. |
+| 8 | **JIRA write-back** | After implementation, post a comment to the JIRA ticket with commit hashes and report path. Closes the loop on the ticket lifecycle without leaving the workflow. |
+| 9 | **Step `depends_on` field** | The plan is strictly sequential but some steps are genuinely parallel (update tests + update docs). An optional `depends_on` field on each step would surface which steps the developer could run in parallel. |
+
+### Known Limitations
+
+- **Prompt-only execution** — there is no code enforcing that Claude followed every step. Report quality depends on the model's context at the time. Always read the report critically.
+- **Large codebases** — for repos over ~500k LOC, the snapshot will inevitably be incomplete. Treat the analysis as directional, not exhaustive.
+- **Trivial tickets** — the analysis overhead is not worth it for one-liner changes, config updates, or renames. Use the plugin for medium-to-large features and non-trivial bug fixes.
 
 ---
 

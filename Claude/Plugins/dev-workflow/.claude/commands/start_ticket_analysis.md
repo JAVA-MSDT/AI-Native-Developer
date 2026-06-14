@@ -15,6 +15,8 @@ You need these inputs. If they were not passed as arguments, ask the user for al
 
 - **test_command** *(optional)*: The command to run tests for this project (e.g., `npm test`, `pytest`, `go test ./...`). If not provided now, you will ask per-step during implementation.
 
+- **scope** *(optional)*: One or more subdirectory paths relative to `codebase_path`, comma-separated (e.g., `src/auth,src/api`). When provided, the codebase exploration and snapshot will be constrained to those directories only. Use this for large repos where the ticket clearly affects a known subsystem. If not provided, the full codebase is analyzed.
+
 ## Step 2 — Fetch or Parse the Requirements
 
 Determine the ticket source type:
@@ -57,7 +59,11 @@ Both files will live in `<codebase_path>/.dev-workflow/`.
 
 ## Step 4 — Explore the Codebase
 
-Using Read, Glob, and Grep on `codebase_path`:
+Determine the exploration root:
+- If `scope` was provided, explore only `<codebase_path>/<scope_dir>` for each directory listed. Note the scope constraint in the snapshot header.
+- If `scope` was not provided, explore from `codebase_path` (full codebase).
+
+Using Read, Glob, and Grep on the exploration root:
 
 1. Map the top-level project structure — understand what kind of project this is, what language/framework, and where the key entry points are.
 2. For each requirement or acceptance criterion from the ticket:
@@ -65,30 +71,7 @@ Using Read, Glob, and Grep on `codebase_path`:
    - Use Grep to find relevant functions, classes, or keywords
    - Read the most relevant files to understand the implementation
    - Trace callsites and dependencies
-3. Document: affected files, functions, modules, and any third-party dependencies touched.
-
-After the exploration, write a compact snapshot to `<codebase_path>/.dev-workflow/codebase_context.md`:
-
-```markdown
-# Codebase Context
-Generated: <date> | Ticket: <file_prefix>
-
-## Tech Stack
-<detected language, framework, test runner, key dependencies — one line each>
-
-## Relevant File Map
-| File | Purpose | Key symbols |
-|------|---------|-------------|
-| path/to/file | what it does | exported functions / classes |
-
-## Key Patterns
-<architecture patterns, naming conventions, auth approach, DB layer, error handling — bullet points>
-
-## Entry Points
-<files that bootstrap the app, register routes, or are the main execution entry>
-```
-
-This snapshot is the single source of codebase context for all subsequent agents — they read it instead of re-exploring the codebase.
+3. Document: affected files, functions, modules, and any third-party dependencies touched. Hold these findings in memory — the snapshot will be written in Step 6 once the state directory exists.
 
 ## Step 5 — Build the Implementation Plan
 
@@ -110,7 +93,7 @@ Represent each step as a JSON object:
 }
 ```
 
-## Step 6 — Create the State Directory
+## Step 6 — Create the State Directory and Write Snapshot
 
 Create `<codebase_path>/.dev-workflow/` if it does not exist:
 ```bash
@@ -127,6 +110,29 @@ Check if `<codebase_path>/.gitignore` exists. If it does and `.dev-workflow/` is
 > "Would you like me to add `.dev-workflow/` to your `.gitignore` automatically? (yes / no)"
 
 If yes, append `.dev-workflow/` to the `.gitignore` file.
+
+**Write the codebase snapshot.** Delete `<codebase_path>/.dev-workflow/codebase_context.md` if it already exists (always regenerate — never reuse a stale snapshot from a previous run). Then write a fresh one using the findings from Step 4:
+
+```markdown
+# Codebase Context
+Generated: <date> | Ticket: <file_prefix>
+
+## Tech Stack
+<detected language, framework, test runner, key dependencies — one line each>
+
+## Relevant File Map
+| File | Purpose | Key symbols |
+|------|---------|-------------|
+| path/to/file | what it does | exported functions / classes |
+
+## Key Patterns
+<architecture patterns, naming conventions, auth approach, DB layer, error handling — bullet points>
+
+## Entry Points
+<files that bootstrap the app, register routes, or are the main execution entry>
+```
+
+This snapshot is the single source of codebase context for all subsequent agents — they read it instead of re-exploring the codebase.
 
 ## Step 7 — Generate the Report
 
@@ -161,6 +167,7 @@ Write `<codebase_path>/.dev-workflow/<prefix>_state.json`:
   "codebase_path": "<path>",
   "output_format": "<html|md>",
   "test_command": "<project test command, or null if not provided>",
+  "scope": "<comma-separated scope dirs, or null if full codebase>",
   "report_path": "<codebase_path>/.dev-workflow/<prefix>.<ext>",
   "state_path": "<codebase_path>/.dev-workflow/<prefix>_state.json",
   "implementation_plan": [<array of step objects from Step 5>],

@@ -8,6 +8,11 @@ If no state file is found, stop and tell the user: "No active workflow found. No
 
 Extract: `completed_steps`, `current_step`, `state_path`.
 
+**Validate required fields.** If any of these are missing or null, stop and tell the user:
+> "The state file is incomplete (missing: `<field list>`). This usually means `/start-ticket-analysis` did not finish successfully. Re-run it to create a fresh analysis."
+
+Required: `state_path`, `current_step`, `completed_steps`.
+
 If `completed_steps` is empty, stop and tell the user: "No completed steps to rollback."
 
 ## Step 2 — Determine Which Step to Rollback

@@ -8,6 +8,11 @@ If no state file is found, stop and tell the user: "No active analysis found. Ru
 
 Extract: `implementation_plan`, `current_step`, `completed_steps`, `codebase_path`, `phase`, `test_command`, `state_path`.
 
+**Validate required fields.** If any of these are missing or null, stop and tell the user:
+> "The state file is incomplete (missing: `<field list>`). This usually means `/start-ticket-analysis` did not finish successfully. Re-run it to create a fresh analysis."
+
+Required: `codebase_path`, `state_path`, `implementation_plan`, `current_step`, `file_prefix`.
+
 ## Step 2 — Determine Which Step to Execute
 
 - If a step number was passed as an argument, use it.
@@ -65,9 +70,14 @@ Run the resolved test command from `codebase_path`.
 
 ## Step 6 — Show Implementation Summary and Ask for Review
 
-Display a summary of what was changed:
+Run `git diff` from `codebase_path` to show the actual changes made:
+```bash
+git diff
+```
+Display the full diff output so the review is based on real changes, not a description of them.
+
+Then summarize:
 - Which files were created or modified
-- A brief description of the changes made
 - Test results (passed / skipped)
 
 Then ask:
@@ -120,10 +130,29 @@ Update `active_state.json` to signal no active workflow:
 { "state_path": null }
 ```
 
+Generate a PR description from the state file and display it ready to copy:
+
+```
+## <ticket_id or source type>: <ticket title>
+
+### Summary
+<2–3 sentence summary of what was implemented, derived from the ticket requirements>
+
+### Changes
+<one bullet per completed step: "- <step title> (`<commit_message>`)" >
+
+### Files Changed
+<deduplicated list of all files across all completed steps>
+
+### Test Coverage
+<list of test commands that were run, one per step>
+```
+
 Then tell the user:
 
 > "All N implementation steps are complete.
 >
+> - Copy the PR description above into your pull request.
 > - State preserved at `.dev-workflow/<prefix>_state.json` — use `/rollback-step` if you need to revert any step.
 > - Review the full change history with `git log --oneline`.
 > - Run `/start-ticket-analysis` when you're ready for the next ticket."

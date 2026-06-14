@@ -8,6 +8,11 @@ If no state file is found, stop and tell the user: "No active analysis found. Ru
 
 Read the state file and extract: `report_path`, `codebase_path`, `implementation_plan`, `review_iterations`, `state_path`.
 
+**Validate required fields.** If any of these are missing or null, stop and tell the user:
+> "The state file is incomplete (missing: `<field list>`). This usually means `/start-ticket-analysis` did not finish successfully. Re-run it to create a fresh analysis."
+
+Required: `codebase_path`, `state_path`, `report_path`, `implementation_plan`.
+
 ## Step 2 — Collect Findings
 
 If the user did not pass findings as an argument, ask:
