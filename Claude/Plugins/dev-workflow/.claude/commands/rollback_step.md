@@ -27,8 +27,17 @@ If the requested step is not found in `completed_steps`, tell the user which ste
 
 ## Step 3 — Find the Commit Hash
 
-The commit hash may be stored in `completed_steps[N].commit`. If it is `"pending"` or missing (because the developer
-commits manually), find the commit using git log:
+First check `completed_steps[N].commit`:
+
+- If it is `"later"` — stop and tell the user:
+  > "Step N (`<title>`) was marked **commit-later** — it has no standalone commit to revert.
+  > To undo these changes, run:
+  > ```bash
+  > git checkout -- <files from this step>
+  > ```
+  > Then update the state manually by removing this step from `completed_steps` and setting `current_step` to N−1."
+
+- If it is `"committed"`, `"pending"`, or missing — find the commit using git log:
 
 ```bash
 git log --oneline -10

@@ -64,7 +64,10 @@ You           → Review the code
 Claude        → If corrections: fixes the code, re-runs tests, asks again
               → If looks good: shows the exact git commit command to run
 
-You           → Run the commit command yourself
+You           → Run the commit command yourself, then answer:
+                - "yes"    → committed now, workflow advances
+                - "later"  → skip commit, batch with future steps
+                - "not yet"→ repeat the command, workflow holds
               → Run /approve-step for the next step
               → OR run /rollback-step if something needs to be undone
               → On the last step: receive a ready-to-paste PR description
