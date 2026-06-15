@@ -76,8 +76,23 @@ Claude        → Shows which commit will be reverted
 
 You           → Confirm
 
-Claude        → Runs git revert — original commit stays in history
+Claude        → Provides `git revert <hash> --no-edit` for you to run
+              → Waits for your confirmation that the revert is done
               → Updates state so /approve-step resumes from the right place
+
+SNAPSHOT REFRESH  (if teammates merge significant changes mid-ticket)
+─────────────────────────────────────────────────────────────────────
+You           → git pull (teammates' changes land)
+              → Run /refresh-snapshot
+
+Claude        → Re-explores the codebase (respecting scope if set)
+              → Rewrites codebase_context.md with current state
+              → Reports what files were added, removed, or changed
+              → State file, report, and implementation plan are untouched
+
+You           → If pulled changes affect remaining steps:
+                run /submit-review-feedback to update the plan
+              → Otherwise: continue with /approve-step
 ```
 
 ---
@@ -101,15 +116,15 @@ Claude        → Runs git revert — original commit stays in history
 
 ## Tech Stack
 
-| Component | Technology |
-|-----------|------------|
-| AI runtime | [Claude Code](https://claude.ai/code) — Claude Sonnet / Opus |
-| Agent orchestration | Claude Code subagents (`.claude/agents/`) |
-| Commands | Claude Code slash commands (`.claude/commands/`) |
-| Ticket source | JIRA REST API v3, any URL, or plain text |
-| Version control | Git (`git add`, `git commit`, `git revert`) |
-| Report output | Self-contained HTML (inline CSS) or Markdown |
-| State persistence | JSON files in `<your-project>/.dev-workflow/` |
+| Component           | Technology                                                   |
+| ------------------- | ------------------------------------------------------------ |
+| AI runtime          | [Claude Code](https://claude.ai/code) — Claude Sonnet / Opus |
+| Agent orchestration | Claude Code subagents (`.claude/agents/`)                    |
+| Commands            | Claude Code slash commands (`.claude/commands/`)             |
+| Ticket source       | JIRA REST API v3, any URL, or plain text                     |
+| Version control     | Git (`git add`, `git commit`, `git revert`)                  |
+| Report output       | Self-contained HTML (inline CSS) or Markdown                 |
+| State persistence   | JSON files in `<your-project>/.dev-workflow/`                |
 
 No external packages or build tools required — this is a prompt-only plugin.
 
@@ -134,9 +149,10 @@ dev-workflow/
     │   ├── submit_review_feedback.md← /submit-review-feedback
     │   ├── approve_step.md          ← /approve-step
     │   ├── rollback_step.md         ← /rollback-step
+    │   ├── refresh_snapshot.md      ← /refresh-snapshot
     │   └── status.md                ← /status
     └── skills/
-        ├── fetch_requirements.md    ← JIRA API / URL fetch / paste fallback
+        ├── fetch_jira_ticket.md     ← JIRA API / URL fetch / paste fallback
         ├── analyze_codebase.md      ← Glob + Grep + Read patterns for analysis
         ├── generate_html_report.md  ← HTML report structure and inline CSS spec
         ├── generate_md_report.md    ← Markdown report structure spec
@@ -160,11 +176,12 @@ Or open it as the root in VS Code / JetBrains with the Claude Code extension.
 
 ### 2. Verify the plugin loads
 
-Type `/` in the Claude Code prompt. You should see all five commands:
+Type `/` in the Claude Code prompt. You should see all six commands:
 - `/start-ticket-analysis`
 - `/submit-review-feedback`
 - `/approve-step`
 - `/rollback-step`
+- `/refresh-snapshot`
 - `/status`
 
 If any are missing, check that `.claude/commands/` contains the matching `.md` files.
@@ -210,12 +227,12 @@ The plugin writes all state and reports into `your-project/.dev-workflow/` — n
 
 ### What you need to provide
 
-| Input | Description | Required |
-|-------|-------------|----------|
-| `ticket_source` | JIRA ID, URL, or pasted text | Yes |
-| `codebase_path` | Path to the repo root you want analyzed | Yes |
-| `output_format` | `html` (default) or `md` | No |
-| `test_command` | e.g. `npm test`, `pytest`, `go test ./...` | No (asked per step if missing) |
+| Input           | Description                                | Required                       |
+| --------------- | ------------------------------------------ | ------------------------------ |
+| `ticket_source` | JIRA ID, URL, or pasted text               | Yes                            |
+| `codebase_path` | Path to the repo root you want analyzed    | Yes                            |
+| `output_format` | `html` (default) or `md`                   | No                             |
+| `test_command`  | e.g. `npm test`, `pytest`, `go test ./...` | No (asked per step if missing) |
 
 ### Testing the Plugin
 
@@ -321,7 +338,9 @@ Restore the field before continuing.
 - Claude asks "Does the implementation look correct?" before giving the commit command
 - If you say "no" or provide corrections: Claude fixes the code and asks again before giving commit command
 - If you say "looks good": Claude shows explicit `git add <files>` and `git commit -m "..."` commands for you to run — it does NOT commit automatically
-- After you reply "looks good", state file shows `"current_step": 1` and `completed_steps` has `{"step": 1, "commit": "pending"}`
+- Claude then asks "Have you committed step N? (yes / not yet)" — state is NOT updated until you confirm yes
+- Only after you reply "yes": state file shows `"current_step": 1` and `completed_steps` has `{"step": 1, "commit": "pending"}`
+- If you reply "not yet": Claude repeats the git commands and waits again — it does not advance the workflow
 
 ---
 
@@ -377,6 +396,36 @@ Run `/start-ticket-analysis` twice on the same `codebase_path` with different `t
 
 ---
 
+#### Test 10 — Snapshot refresh mid-ticket
+
+After Test 1 (with an active workflow in place), simulate a teammate's change by adding a new file to `.claude/commands/`:
+
+```bash
+# Simulate a teammate commit landing
+echo "# placeholder" > .claude/commands/test_placeholder.md
+```
+
+Then run:
+```
+/refresh-snapshot
+```
+
+**What to verify:**
+- Claude shows the confirmation prompt with active ticket, codebase path, and scope before proceeding
+- Claude does NOT proceed without explicit "yes"
+- After confirmation: Claude announces "Re-exploring codebase — reading directly from codebase (not snapshot)"
+- `codebase_context.md` is rewritten — snapshot header shows `Refreshed: yes` and the new timestamp
+- The summary output lists `test_placeholder.md` as a newly added file
+- The state file, report file, and `implementation_plan` are completely unchanged
+- Claude ends with a recommendation to run `/submit-review-feedback` if the changes affect remaining steps
+
+Clean up afterwards:
+```bash
+rm .claude/commands/test_placeholder.md
+```
+
+---
+
 ## Configuration
 
 ### JIRA credentials
@@ -403,12 +452,12 @@ Or leave it out — Claude will ask per step during implementation.
 
 The plugin's `settings.json` grants these permissions automatically:
 
-| Permission | Purpose |
-|------------|---------|
-| `Read(*)`, `Write(*)`, `Edit(*)` | Codebase analysis and report generation |
-| `Bash(curl:*)` | Fetching JIRA tickets |
-| `Bash(git add/commit/revert/log/status/diff/stash:*)` | Committing and rolling back steps |
-| `Bash(mkdir/cat/echo:*)` | Creating the state directory and logging |
+| Permission                                            | Purpose                                  |
+| ----------------------------------------------------- | ---------------------------------------- |
+| `Read(*)`, `Write(*)`, `Edit(*)`                      | Codebase analysis and report generation  |
+| `Bash(curl:*)`                                        | Fetching JIRA tickets                    |
+| `Bash(git add/commit/revert/log/status/diff/stash:*)` | Committing and rolling back steps        |
+| `Bash(mkdir/cat/echo:*)`                              | Creating the state directory and logging |
 
 A `PostToolUse` hook logs a timestamped line to the terminal after every subagent `Task` call.
 
@@ -426,17 +475,17 @@ your-project/.dev-workflow/
 
 Key fields in the state file:
 
-| Field | Description |
-|-------|-------------|
-| `phase` | `review` or `implementation` |
-| `ticket_source` | The original ticket input |
-| `file_prefix` | The slug used for this analysis's filenames |
-| `codebase_path` | The analyzed repo path |
-| `report_path` | Full path to the HTML/MD report |
+| Field                 | Description                                                        |
+| --------------------- | ------------------------------------------------------------------ |
+| `phase`               | `review` or `implementation`                                       |
+| `ticket_source`       | The original ticket input                                          |
+| `file_prefix`         | The slug used for this analysis's filenames                        |
+| `codebase_path`       | The analyzed repo path                                             |
+| `report_path`         | Full path to the HTML/MD report                                    |
 | `implementation_plan` | Array of step objects (title, files, test_command, commit_message) |
-| `current_step` | Last completed step number |
-| `completed_steps` | Array of completed steps with commit status |
-| `review_iterations` | Number of feedback cycles completed |
+| `current_step`        | Last completed step number                                         |
+| `completed_steps`     | Array of completed steps with commit status                        |
+| `review_iterations`   | Number of feedback cycles completed                                |
 
 **To start a new analysis:** just run `/start-ticket-analysis` — it creates new files with the new ticket's name. Previous analyses remain in `.dev-workflow/` untouched.
 
@@ -478,25 +527,24 @@ Key fields in the state file:
 
 ### Done — Implemented
 
-| # | What | Status |
-|---|------|--------|
-| 1 | **`git diff` after implementation** | ✅ `approve_step.md` Step 6 now runs `git diff` and displays the full output before asking for review. |
-| 2 | **Snapshot regeneration guarantee** | ✅ Snapshot write moved to Step 6 (after `mkdir`); old `codebase_context.md` deleted before each new run. |
-| 3 | **PR description on completion** | ✅ `approve_step.md` Step 9 generates a copy-ready PR description when all steps complete. |
-| 4 | **State validity check** | ✅ All three commands (`approve_step`, `submit_review_feedback`, `rollback_step`) validate required fields after reading state. |
-| 5 | **Analysis scope parameter** | ✅ Optional `scope` input added to `/start-ticket-analysis`; constrains exploration and snapshot to specified subdirectories. |
+| #   | What                                | Status                                                                                                                                                                                   |
+| --- | ----------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | **`git diff` after implementation** | ✅ `approve_step.md` Step 6 now runs `git diff` and displays the full output before asking for review.                                                                                    |
+| 2   | **Snapshot regeneration guarantee** | ✅ Snapshot write moved to Step 6 (after `mkdir`); old `codebase_context.md` deleted before each new run.                                                                                 |
+| 3   | **PR description on completion**    | ✅ `approve_step.md` Step 9 generates a copy-ready PR description when all steps complete.                                                                                                |
+| 4   | **State validity check**            | ✅ All three commands (`approve_step`, `submit_review_feedback`, `rollback_step`) validate required fields after reading state.                                                           |
+| 5   | **Analysis scope parameter**        | ✅ Optional `scope` input added to `/start-ticket-analysis`; constrains exploration and snapshot to specified subdirectories.                                                             |
+| 6   | **`/refresh-snapshot` command**     | ✅ Re-explores the codebase and rewrites `codebase_context.md` without touching the state file, report, or implementation plan. Run after any significant pull during an active workflow. |
 
 ### Future — Larger Features
 
 These require more work but would meaningfully extend the plugin's value.
 
-| # | What | Why |
-|---|------|-----|
-| 6 | **`/refresh-snapshot` command** | If you pull significant codebase changes mid-ticket (teammates merging while you're mid-implementation), the snapshot 
-becomes stale. This command re-explores the codebase and rewrites `codebase_context.md` without touching the state file, report, or implementation plan. Run it after any significant pull during an active workflow. |
-| 7 | **`/edit-plan` command** | Common scenario: the report is good but you want to reorder or split steps before implementing. Currently forces a full `/submit-review-feedback` cycle. A direct plan editor removes that friction. |
-| 8 | **JIRA write-back** | After implementation, post a comment to the JIRA ticket with commit hashes and report path. Closes the loop on the ticket lifecycle without leaving the workflow. |
-| 9 | **Step `depends_on` field** | The plan is strictly sequential but some steps are genuinely parallel (update tests + update docs). An optional `depends_on` field on each step would surface which steps the developer could run in parallel. |
+| #   | What                        | Why                                                                                                                                                                                                            |
+| --- | --------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 7   | **`/edit-plan` command**    | Common scenario: the report is good but you want to reorder or split steps before implementing. Currently forces a full `/submit-review-feedback` cycle. A direct plan editor removes that friction.           |
+| 8   | **JIRA write-back**         | After implementation, post a comment to the JIRA ticket with commit hashes and report path. Closes the loop on the ticket lifecycle without leaving the workflow.                                              |
+| 9   | **Step `depends_on` field** | The plan is strictly sequential but some steps are genuinely parallel (update tests + update docs). An optional `depends_on` field on each step would surface which steps the developer could run in parallel. |
 
 ### Known Limitations
 
@@ -516,36 +564,6 @@ MIT
 
 Ahmed Samy
 
-## Notes - To be done
-- In real application if the plugin required to read some external library it copies it/them inside the plugin folder, and that by default will add unnecessary files to the project.
+## Design Notes
 
-- After the implementation i got the bellow request
-  -   Does the implementation look correct to you? Any changes needed before committing?
-    - Reply 'looks good' and I'll give you the commit command to run.
-    - Reply with comments or corrections and I'll update the code before you commit.
-  - Responded                                                          
-    ❯ looks good 
-  - Then got this back     
-    ● Run these commands to commit step 1:
-    git add src/main/java/com/javamsdt/masking/dto/UserDto.java                                                                                                                                                    git commit -m "feat: add @MaskMe annotation to UserDto.balance with BalanceMaskingCondition"
-    Now updating state.
-  - So far so good, after that the plugin updated the state file and everything good .
-  - but i did not got any additional notification that have i merged my changes or not, this is important step, because the plugin run into ready to to do the next step without me remembering have i commit the implemented step or not.
-  - That what i got
-    - Step 1 complete. Run /approve-step to continue with step 2 (add GET /users/balance/{id} endpoint).
-  - I think  need also to get the reminder as following
-    - Have you committed the N step , if not please commit for safety before proceeding, If yes now you can choose to Run /approve-step to continue with step N (description) or Run /rollback-step (or /rollback-step 2 for a specific step)
-
-
-- In case of rollback
-- i got this request (Expected, that is fine)
--   Confirm rollback of step 1? (yes / no)
-  ❯ yes 
-  ● Run this command:                                    
-    git revert e0c21dd --no-edit
-  If there are merge conflicts, resolve them then run git revert --continue. Come back here when the revert is complete.
-- this message is a bit poor and not descriptive.
-  - If there are merge conflicts, resolve them then run git revert --continue. Come back here when the revert is complete.
-- I think it should also include hint to the next step and what can i do next, in which step i am which command logically to be next, so the developer will not loose track where he was and what he is doing.
-
-- Also i would like to let the user know from where we are reading the codebase, from the codebase_context for the subsequent read or from the codebase directly
+- **No external dependencies (by design):** JIRA fetching uses `curl` via Claude's `Bash` tool; all file I/O uses Claude's native `Read`/`Write`/`Glob`/`Grep` tools. No npm install, no bundled scripts, no files added to your project beyond the Markdown commands themselves.

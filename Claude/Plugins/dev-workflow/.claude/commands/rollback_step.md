@@ -54,7 +54,17 @@ git revert <commit_hash> --no-edit
 ```
 
 Tell the user:
-> "Run the command above. If there are merge conflicts, resolve them then run `git revert --continue`. Come back here when the revert is complete."
+> "Run the command above to revert step N: **<title>**.
+>
+> **If the revert succeeds:** come back here and confirm so I can update the workflow state.
+>
+> **If there are merge conflicts:**
+> 1. Resolve the conflicts in your editor
+> 2. Run `git add <conflicted files>`
+> 3. Run `git revert --continue`
+> 4. Then come back here and confirm.
+>
+> **Where you are:** You were on step N of <total> — steps <list of still-completed steps> remain committed. After this revert, step N will be undone and you can re-implement it or revise the plan."
 
 Do not run the revert automatically — let the developer execute it.
 
@@ -76,9 +86,19 @@ Update the state file at `state_path`:
 
 ## Step 8 — Present to User
 
-Show:
-1. Step N reverted successfully
-2. Revert commit hash
-3. Current state: which steps are still completed
+Show a full summary:
 
-Then say: "Use `/approve-step` to re-implement step N with a revised approach, or `/submit-review-feedback` if the implementation plan itself needs revision."
+```
+✓ Step N reverted: <title>
+  Revert commit: <revert_hash>
+
+  Workflow position:
+    Completed steps: <list remaining completed steps, or "none">
+    Current step:    <new current_step>
+    Remaining steps: <count> steps left in the plan
+
+  What to do next:
+  • Run /approve-step          — re-implement step N (same plan, fresh attempt)
+  • Run /submit-review-feedback — revise the plan before re-implementing
+  • Run /rollback-step          — roll back another step if needed
+```

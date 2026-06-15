@@ -8,6 +8,7 @@ Automates ticket analysis, iterative review, and step-by-step implementation wit
 - Optional `scope` parameter limits analysis to specific subdirectories — reduces tokens on large repos
 - Analyzes the codebase and generates a full HTML or Markdown report named after the ticket (e.g., `PROJ-123_add-token-refresh.html`)
 - Writes a `codebase_context.md` snapshot — reused by review iterations to avoid redundant file reads; always regenerated fresh on each new ticket
+- `/refresh-snapshot` re-explores the codebase and rewrites the snapshot without touching the state file, report, or implementation plan — use after a significant `git pull` mid-ticket
 - Builds a structured, self-contained implementation plan as part of the report
 - Validates state file integrity on every command — clear error if a previous run failed mid-way
 - Supports unlimited review/feedback iterations — report updates in place
@@ -24,6 +25,7 @@ Automates ticket analysis, iterative review, and step-by-step implementation wit
 /submit-review-feedback  — Re-analyze based on your findings, update report
 /approve-step            — Implement the next step and get the commit command
 /rollback-step           — Revert the last committed step
+/refresh-snapshot        — Re-explore codebase and update snapshot after a git pull
 /status                  — Show current workflow state
 ```
 

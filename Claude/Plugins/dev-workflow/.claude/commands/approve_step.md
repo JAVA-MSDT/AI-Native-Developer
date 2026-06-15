@@ -98,8 +98,14 @@ git add <list each file explicitly — one per line>
 git commit -m "<commit_message from plan>"
 ```
 
-Tell the user:
-> "Run the commands above to commit step N. Once committed, run `/approve-step` to continue with step N+1, or `/rollback-step` if you need to undo this step."
+Then ask:
+> "Have you committed step N? (yes / not yet)"
+
+Wait for explicit confirmation. Do not proceed to the next step until the user confirms.
+
+**If the user says "not yet":** repeat the git commands and wait again.
+
+**If the user confirms committed:** proceed to Step 8.
 
 **If the user provides corrections or comments:**
 
@@ -107,7 +113,7 @@ Make the requested changes to the relevant files, then go back to Step 5 (re-run
 
 ## Step 8 — Update State
 
-After the user confirms the implementation looks good (at Step 6), update the state file at `state_path` immediately — do not wait for the commit:
+After the user confirms the commit is done, update the state file at `state_path`:
 - Set `phase` to `"implementation"`
 - Set `current_step` to the step number just completed
 - Append to `completed_steps`:
@@ -160,4 +166,7 @@ Then tell the user:
 **If there are more steps remaining:**
 
 Tell the user:
-> "Step N complete. Run `/approve-step` to continue with step N+1."
+> "Step N committed and complete.
+>
+> - Run `/approve-step` to continue with step N+1: <next step title>
+> - Run `/rollback-step` if you need to undo this step before moving forward."
