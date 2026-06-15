@@ -27,6 +27,15 @@ Look up the step in `implementation_plan` by its `step` number.
 If the step number is beyond the last step in the plan, tell the user: "All N implementation steps are complete. Review
 your changes with `git log`."
 
+**Check for pending commits.** Scan `completed_steps` for any entries where `"commit": "later"`. If found, display a
+reminder banner before proceeding:
+
+```
+⚠ Uncommitted steps: <list step numbers and titles marked "later">
+  These changes are implemented but not yet committed.
+  You can commit them now before continuing, or continue and commit later.
+```
+
 ## Step 3 — Show Step Details and Confirm
 
 Display:
@@ -111,13 +120,21 @@ git commit -m "<commit_message from plan>"
 ```
 
 Then ask:
-> "Have you committed step N? (yes / not yet)"
+> "Have you committed step N?
+> - **yes** — committed, ready to continue
+> - **later** — skip commit for now, I'll batch it with upcoming steps
+> - **not yet** — haven't run the command yet"
 
-Wait for explicit confirmation. Do not proceed to the next step until the user confirms.
+Wait for a response.
 
 **If the user says "not yet":** repeat the git commands and wait again.
 
-**If the user confirms committed:** proceed to Step 8.
+**If the user says "yes":** proceed to Step 8 with commit status `"committed"`.
+
+**If the user says "later":** proceed to Step 8 with commit status `"later"`. Tell the user:
+> "Noted — step N's changes are implemented but not committed. Remember to commit before pushing or opening a PR.
+> Run `/rollback-step N` if you need to undo these changes (note: rollback requires a committed hash — uncommitted
+> changes must be reverted manually with `git checkout -- <files>`)."
 
 **If the user provides corrections or comments:**
 
@@ -125,19 +142,20 @@ Make the requested changes to the relevant files, then go back to Step 5 (re-run
 
 ## Step 8 — Update State
 
-After the user confirms the commit is done, update the state file at `state_path`:
+After the user responds in Step 7, update the state file at `state_path`:
 
 - Set `phase` to `"implementation"`
 - Set `current_step` to the step number just completed
-- Append to `completed_steps`:
+- Append to `completed_steps` using the commit status from Step 7:
   ```json
-  { "step": N, "title": "<title>", "commit": "pending" }
+  { "step": N, "title": "<title>", "commit": "committed" }   ← if user said "yes"
+  { "step": N, "title": "<title>", "commit": "later" }       ← if user said "later"
   ```
 
 When the user later runs `/approve-step` for the next step, the state will correctly show which step was last worked on.
 
-> **Note on rollback:** `/rollback-step` uses `git log` to find the relevant commit automatically — you do not need to
-> provide the commit hash manually.
+> **Note on rollback:** `/rollback-step` uses `git log` to find the relevant commit. Steps marked `"commit": "later"`
+> have no standalone commit — they must be reverted manually with `git checkout -- <files>` if needed.
 
 ## Step 9 — Check for Completion
 
@@ -145,6 +163,16 @@ After updating state, check if the just-completed step is the last step in `impl
 `current_step == implementation_plan.length`).
 
 **If this was the last step:**
+
+**Check for uncommitted steps.** Scan `completed_steps` for any entries with `"commit": "later"`. If found, show a
+warning before the PR description:
+
+```
+⚠ Uncommitted steps detected — commit these before pushing:
+  <list each step number, title, and suggested git command>
+  git add <files for that step>
+  git commit -m "<commit_message from plan>"
+```
 
 Update `active_state.json` to signal no active workflow:
 

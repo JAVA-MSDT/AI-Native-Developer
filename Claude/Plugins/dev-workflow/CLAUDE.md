@@ -16,7 +16,7 @@ Automates ticket analysis, iterative review, and step-by-step implementation wit
 - Validates state file integrity on every command — clear error if a previous run failed mid-way
 - Supports unlimited review/feedback iterations — report updates in place
 - Shows `git diff` after each implementation step so review is based on real changes
-- HITL confirmation before each step; developer runs git commands manually — Claude never commits automatically
+- HITL confirmation before each step; developer runs git commands manually — after each step choose **yes** (committed now), **later** (batch with upcoming steps), or **not yet** (re-prompt); uncommitted steps are tracked and surfaced at PR description time
 - Generates a ready-to-paste PR description when all implementation steps are complete
 - Rollback any step with `git revert` — git history is always preserved
 - Writes all state and reports to `<your-project>/.dev-workflow/` — never inside the plugin itself
