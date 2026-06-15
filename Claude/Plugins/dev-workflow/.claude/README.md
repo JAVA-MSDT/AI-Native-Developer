@@ -623,7 +623,8 @@ MIT
 
 ## Author
 
-Ahmed Samy
+- **Ahmed Samy** — collected from real-world AI experience and shared for the community.
+- **LinkedIn** [Catch Me There](https://www.linkedin.com/in/java-msdt/)
 
 ## Design Notes
 

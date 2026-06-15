@@ -44,3 +44,8 @@ This directory contains all Claude Code configuration for the document-review pl
 ## Hook
 
 A `PostToolUse` hook fires after every `Task` tool call and logs a completion timestamp. Defined in `settings.json` under `hooks.PostToolUse`.
+
+## Author
+
+- **Ahmed Samy** — collected from real-world AI experience and shared for the community.
+- **LinkedIn** [Catch Me There](https://www.linkedin.com/in/java-msdt/)
