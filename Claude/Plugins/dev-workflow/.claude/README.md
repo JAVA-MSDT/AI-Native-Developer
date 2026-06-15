@@ -133,7 +133,8 @@ dev-workflow/
     │   ├── start_ticket_analysis.md ← /start-ticket-analysis
     │   ├── submit_review_feedback.md← /submit-review-feedback
     │   ├── approve_step.md          ← /approve-step
-    │   └── rollback_step.md         ← /rollback-step
+    │   ├── rollback_step.md         ← /rollback-step
+    │   └── status.md                ← /status
     └── skills/
         ├── fetch_requirements.md    ← JIRA API / URL fetch / paste fallback
         ├── analyze_codebase.md      ← Glob + Grep + Read patterns for analysis
@@ -514,3 +515,37 @@ MIT
 ## Author
 
 Ahmed Samy
+
+## Notes - To be done
+- In real application if the plugin required to read some external library it copies it/them inside the plugin folder, and that by default will add unnecessary files to the project.
+
+- After the implementation i got the bellow request
+  -   Does the implementation look correct to you? Any changes needed before committing?
+    - Reply 'looks good' and I'll give you the commit command to run.
+    - Reply with comments or corrections and I'll update the code before you commit.
+  - Responded                                                          
+    ❯ looks good 
+  - Then got this back     
+    ● Run these commands to commit step 1:
+    git add src/main/java/com/javamsdt/masking/dto/UserDto.java                                                                                                                                                    git commit -m "feat: add @MaskMe annotation to UserDto.balance with BalanceMaskingCondition"
+    Now updating state.
+  - So far so good, after that the plugin updated the state file and everything good .
+  - but i did not got any additional notification that have i merged my changes or not, this is important step, because the plugin run into ready to to do the next step without me remembering have i commit the implemented step or not.
+  - That what i got
+    - Step 1 complete. Run /approve-step to continue with step 2 (add GET /users/balance/{id} endpoint).
+  - I think  need also to get the reminder as following
+    - Have you committed the N step , if not please commit for safety before proceeding, If yes now you can choose to Run /approve-step to continue with step N (description) or Run /rollback-step (or /rollback-step 2 for a specific step)
+
+
+- In case of rollback
+- i got this request (Expected, that is fine)
+-   Confirm rollback of step 1? (yes / no)
+  ❯ yes 
+  ● Run this command:                                    
+    git revert e0c21dd --no-edit
+  If there are merge conflicts, resolve them then run git revert --continue. Come back here when the revert is complete.
+- this message is a bit poor and not descriptive.
+  - If there are merge conflicts, resolve them then run git revert --continue. Come back here when the revert is complete.
+- I think it should also include hint to the next step and what can i do next, in which step i am which command logically to be next, so the developer will not loose track where he was and what he is doing.
+
+- Also i would like to let the user know from where we are reading the codebase, from the codebase_context for the subsequent read or from the codebase directly
