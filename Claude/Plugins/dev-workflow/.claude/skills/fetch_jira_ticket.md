@@ -4,15 +4,16 @@ Fetch and parse requirements from any source: JIRA ticket, URL, or pasted text.
 
 ## Source Detection
 
-| Input | Type | Method |
-|-------|------|--------|
-| Matches `[A-Z]+-\d+` (e.g., `PROJ-123`) | JIRA ID | REST API call |
-| Starts with `http://` or `https://` | URL | HTTP fetch |
-| Anything else | Pasted text | Use directly |
+| Input                                   | Type        | Method        |
+|-----------------------------------------|-------------|---------------|
+| Matches `[A-Z]+-\d+` (e.g., `PROJ-123`) | JIRA ID     | REST API call |
+| Starts with `http://` or `https://`     | URL         | HTTP fetch    |
+| Anything else                           | Pasted text | Use directly  |
 
 ## JIRA API Fetch
 
 Required environment variables:
+
 - `JIRA_URL` — e.g., `https://yourcompany.atlassian.net`
 - `JIRA_USERNAME` — Atlassian account email
 - `JIRA_API_KEY` — API token from https://id.atlassian.com/manage-profile/security/api-tokens
@@ -24,6 +25,7 @@ curl -s -u "$JIRA_USERNAME:$JIRA_API_KEY" \
 ```
 
 Parse response fields:
+
 - `fields.summary` → title
 - `fields.description` → description (Atlassian Document Format — walk the content nodes and extract text)
 - `fields.issuetype.name` → type
@@ -33,6 +35,7 @@ Parse response fields:
 ## URL Fetch
 
 Fetch the page content and extract:
+
 - Look for section headings: "Description", "Requirements", "Acceptance Criteria", "Definition of Done"
 - Extract the text content under those sections
 - Strip HTML tags and navigation elements

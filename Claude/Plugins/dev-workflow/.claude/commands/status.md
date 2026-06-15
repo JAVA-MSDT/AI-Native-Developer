@@ -1,14 +1,18 @@
-You are executing the `/status` command. Display the current workflow state. This command is strictly read-only — do not write or edit any files.
+You are executing the `/status` command. Display the current workflow state. This command is strictly read-only — do not
+write or edit any files.
 
 ## Step 1 — Find the Active State File
 
 Read `active_state.json` using the same discovery logic as all other commands:
+
 1. Ask the user: "What is your `codebase_path`?" if it is not already known from context.
 2. Read `<codebase_path>/.dev-workflow/active_state.json` to get `state_path`.
-3. If `active_state.json` does not exist, look for any `*_state.json` file in `<codebase_path>/.dev-workflow/` and use the most recently modified one.
+3. If `active_state.json` does not exist, look for any `*_state.json` file in `<codebase_path>/.dev-workflow/` and use
+   the most recently modified one.
 
 **Case A — No state file found, or `active_state.json` has `"state_path": null`:**
 Stop and display:
+
 ```
 No active workflow found.
 Run /start-ticket-analysis to begin.
@@ -16,10 +20,12 @@ Run /start-ticket-analysis to begin.
 
 **Case B — State file exists but is not valid JSON:**
 Stop and display:
+
 ```
 Warning: <state_path> is not valid JSON — the file may be corrupted.
 To reset: delete the file and run /start-ticket-analysis.
 ```
+
 Do not attempt to display partial content.
 
 **Case C — Valid JSON but missing expected fields:**

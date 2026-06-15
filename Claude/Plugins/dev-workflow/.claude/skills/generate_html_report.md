@@ -118,4 +118,5 @@ Generate a complete, self-contained HTML analysis report with inline CSS.
 
 ## Writing the File
 
-Write the complete HTML to `output_path` using the Write tool. The file must be fully self-contained — no external CSS, fonts, or JS references.
+Write the complete HTML to `output_path` using the Write tool. The file must be fully self-contained — no external CSS,
+fonts, or JS references.

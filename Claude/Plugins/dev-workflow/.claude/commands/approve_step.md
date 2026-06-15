@@ -2,14 +2,18 @@ You are executing the `/approve-step` workflow. Follow every step in order.
 
 ## Step 1 — Read State
 
-Read the active state file. First read `<codebase_path>/.dev-workflow/active_state.json` to find the current state file path. If `active_state.json` does not exist, look for any `*_state.json` file in `.dev-workflow/` and use the most recently modified one.
+Read the active state file. First read `<codebase_path>/.dev-workflow/active_state.json` to find the current state file
+path. If `active_state.json` does not exist, look for any `*_state.json` file in `.dev-workflow/` and use the most
+recently modified one.
 
 If no state file is found, stop and tell the user: "No active analysis found. Run `/start-ticket-analysis` first."
 
-Extract: `implementation_plan`, `current_step`, `completed_steps`, `codebase_path`, `phase`, `test_command`, `state_path`.
+Extract: `implementation_plan`, `current_step`, `completed_steps`, `codebase_path`, `phase`, `test_command`,
+`state_path`.
 
 **Validate required fields.** If any of these are missing or null, stop and tell the user:
-> "The state file is incomplete (missing: `<field list>`). This usually means `/start-ticket-analysis` did not finish successfully. Re-run it to create a fresh analysis."
+> "The state file is incomplete (missing: `<field list>`). This usually means `/start-ticket-analysis` did not finish
+> successfully. Re-run it to create a fresh analysis."
 
 Required: `codebase_path`, `state_path`, `implementation_plan`, `current_step`, `file_prefix`.
 
@@ -20,11 +24,13 @@ Required: `codebase_path`, `state_path`, `implementation_plan`, `current_step`, 
 
 Look up the step in `implementation_plan` by its `step` number.
 
-If the step number is beyond the last step in the plan, tell the user: "All N implementation steps are complete. Review your changes with `git log`."
+If the step number is beyond the last step in the plan, tell the user: "All N implementation steps are complete. Review
+your changes with `git log`."
 
 ## Step 3 — Show Step Details and Confirm
 
 Display:
+
 ```
 Step N: <title>
 Description: <description>
@@ -52,6 +58,7 @@ Using the `files` list from the step plan:
 ## Step 5 — Run Tests
 
 Determine the test command (in priority order):
+
 1. The step's own `test_command` field (if defined and non-empty)
 2. The project-level `test_command` from `workflow_state.json` (if set)
 3. Ask the user: "What command should I run to verify this step?"
@@ -59,6 +66,7 @@ Determine the test command (in priority order):
 Run the resolved test command from `codebase_path`.
 
 **If tests fail:**
+
 - Show the full failure output
 - Diagnose the root cause
 - Propose a fix
@@ -66,17 +74,21 @@ Run the resolved test command from `codebase_path`.
 - Do NOT proceed without user input
 
 **If tests pass:**
+
 - Show a summary of passing results
 
 ## Step 6 — Show Implementation Summary and Ask for Review
 
 Run `git diff` from `codebase_path` to show the actual changes made:
+
 ```bash
 git diff
 ```
+
 Display the full diff output so the review is based on real changes, not a description of them.
 
 Then summarize:
+
 - Which files were created or modified
 - Test results (passed / skipped)
 
@@ -114,6 +126,7 @@ Make the requested changes to the relevant files, then go back to Step 5 (re-run
 ## Step 8 — Update State
 
 After the user confirms the commit is done, update the state file at `state_path`:
+
 - Set `phase` to `"implementation"`
 - Set `current_step` to the step number just completed
 - Append to `completed_steps`:
@@ -123,15 +136,18 @@ After the user confirms the commit is done, update the state file at `state_path
 
 When the user later runs `/approve-step` for the next step, the state will correctly show which step was last worked on.
 
-> **Note on rollback:** `/rollback-step` uses `git log` to find the relevant commit automatically — you do not need to provide the commit hash manually.
+> **Note on rollback:** `/rollback-step` uses `git log` to find the relevant commit automatically — you do not need to
+> provide the commit hash manually.
 
 ## Step 9 — Check for Completion
 
-After updating state, check if the just-completed step is the last step in `implementation_plan` (i.e., `current_step == implementation_plan.length`).
+After updating state, check if the just-completed step is the last step in `implementation_plan` (i.e.,
+`current_step == implementation_plan.length`).
 
 **If this was the last step:**
 
 Update `active_state.json` to signal no active workflow:
+
 ```json
 { "state_path": null }
 ```

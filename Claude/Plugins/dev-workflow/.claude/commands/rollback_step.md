@@ -2,14 +2,17 @@ You are executing the `/rollback-step` workflow. Follow every step in order.
 
 ## Step 1 — Read State
 
-Read the active state file. First read `<codebase_path>/.dev-workflow/active_state.json` to find the current state file path. If `active_state.json` does not exist, look for any `*_state.json` file in `.dev-workflow/` and use the most recently modified one.
+Read the active state file. First read `<codebase_path>/.dev-workflow/active_state.json` to find the current state file
+path. If `active_state.json` does not exist, look for any `*_state.json` file in `.dev-workflow/` and use the most
+recently modified one.
 
 If no state file is found, stop and tell the user: "No active workflow found. Nothing to rollback."
 
 Extract: `completed_steps`, `current_step`, `state_path`.
 
 **Validate required fields.** If any of these are missing or null, stop and tell the user:
-> "The state file is incomplete (missing: `<field list>`). This usually means `/start-ticket-analysis` did not finish successfully. Re-run it to create a fresh analysis."
+> "The state file is incomplete (missing: `<field list>`). This usually means `/start-ticket-analysis` did not finish
+> successfully. Re-run it to create a fresh analysis."
 
 Required: `state_path`, `current_step`, `completed_steps`.
 
@@ -24,17 +27,20 @@ If the requested step is not found in `completed_steps`, tell the user which ste
 
 ## Step 3 — Find the Commit Hash
 
-The commit hash may be stored in `completed_steps[N].commit`. If it is `"pending"` or missing (because the developer commits manually), find the commit using git log:
+The commit hash may be stored in `completed_steps[N].commit`. If it is `"pending"` or missing (because the developer
+commits manually), find the commit using git log:
 
 ```bash
 git log --oneline -10
 ```
 
-Match the commit message from the step's `commit_message` field to find the right hash. Show the matches to the user and ask them to confirm which commit to revert if there is ambiguity.
+Match the commit message from the step's `commit_message` field to find the right hash. Show the matches to the user and
+ask them to confirm which commit to revert if there is ambiguity.
 
 ## Step 4 — Confirm
 
 Display:
+
 ```
 Rollback Step N: <title>
 Commit to revert: <commit hash> — "<commit message>"
@@ -64,7 +70,8 @@ Tell the user:
 > 3. Run `git revert --continue`
 > 4. Then come back here and confirm.
 >
-> **Where you are:** You were on step N of <total> — steps <list of still-completed steps> remain committed. After this revert, step N will be undone and you can re-implement it or revise the plan."
+> **Where you are:** You were on step N of <total> — steps <list of still-completed steps> remain committed. After this
+> revert, step N will be undone and you can re-implement it or revise the plan."
 
 Do not run the revert automatically — let the developer execute it.
 
@@ -77,6 +84,7 @@ Once the user confirms:
 ## Step 7 — Update State
 
 Update the state file at `state_path`:
+
 - Remove the rolled-back step from `completed_steps`
 - Set `current_step` to the step number before the rolled-back step (or 0 if it was step 1)
 - Add a `rollbacks` array (or append to it) with:

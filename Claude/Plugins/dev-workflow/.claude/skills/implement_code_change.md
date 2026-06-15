@@ -18,6 +18,7 @@ Always read every file in `step.files` before making any change. Understand the 
 Use Edit to make targeted changes to each file in `step.files`.
 
 Rules:
+
 - Only modify files listed in `step.files`
 - Only implement what `step.description` says
 - Do not refactor, rename, or clean up surrounding code
@@ -57,8 +58,10 @@ Capture the commit hash from the output line that reads: `[branch <hash>] messag
 ## Rollback Support
 
 To rollback a previously committed step:
+
 ```bash
 git revert <commit_hash> --no-edit
 ```
 
-This creates a new revert commit, preserving history. The commit hash of the revert commit should be captured and stored separately from the original.
+This creates a new revert commit, preserving history. The commit hash of the revert commit should be captured and stored
+separately from the original.

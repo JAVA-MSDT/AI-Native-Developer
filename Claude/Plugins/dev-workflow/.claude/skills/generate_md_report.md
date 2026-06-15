@@ -100,4 +100,5 @@ Generate a Markdown analysis report.
 
 Write the complete Markdown to `output_path` using the Write tool.
 
-For updates (review_iteration > 0), edit the existing file in place — add a "Review Iteration N" section at the top of the Review History block and update the affected sections.
+For updates (review_iteration > 0), edit the existing file in place — add a "Review Iteration N" section at the top of
+the Review History block and update the affected sections.
