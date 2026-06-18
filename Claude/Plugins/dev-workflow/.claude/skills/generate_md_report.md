@@ -10,6 +10,8 @@ Generate a Markdown analysis report.
 - `open_questions`: Array of unanswered questions
 - `review_iteration`: Integer (0 = initial, 1+ = updated)
 - `output_path`: Where to write the file
+- `test_strategy`: Object with `detected_convention`, `test_framework`, `patterns_summary`,
+  `steps_needing_tests[]` (each: step, test_type, test_file, test_guidance)
 
 ## Markdown Structure
 
@@ -74,6 +76,10 @@ Generate a Markdown analysis report.
 
 **Test**: `{test_command}`
 
+**Test Type**: `{test_type}`
+
+**Test Guidance**: {test_guidance — omit this line when test_type is "none" or null}
+
 **Commit**: `{commit_message}`
 
 ---
@@ -86,6 +92,27 @@ Generate a Markdown analysis report.
 
 - {question 1}
 - {question 2}
+
+---
+
+## Test Strategy
+
+**Framework**: {test_strategy.test_framework or "Unknown"}
+**Convention**: {test_strategy.detected_convention or "Not detected"}
+
+### Pattern Summary
+
+{test_strategy.patterns_summary}
+
+### Coverage by Step
+
+| Step | Test Type | Test File | Approach |
+|------|-----------|-----------|----------|
+| {step} | {test_type} | `{test_file}` | {test_guidance — first sentence} |
+
+{if test_strategy.detected_convention is null}
+> **Warning**: No existing tests found. Confirm test framework before implementing test steps.
+{/if}
 
 ---
 

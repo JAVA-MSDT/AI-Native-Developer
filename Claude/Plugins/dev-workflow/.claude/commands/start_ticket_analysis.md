@@ -99,6 +99,18 @@ Create a numbered, ordered list of self-contained implementation steps. Each ste
 - Only touch the files listed for that step
 - Be independently committable and verifiable
 - Include a test command or validation criteria
+- Include a `test_type` assessment and `test_guidance` where applicable (populated in Step 5.5 below)
+
+**For each step, assess whether it requires tests:**
+
+| Change type                               | Test required?                  | test_type       |
+| ----------------------------------------- | ------------------------------- | --------------- |
+| New public function, class, or module     | Yes — unit test                 | `"unit"`        |
+| New API endpoint or DB query/mutation     | Yes — integration test          | `"integration"` |
+| Modification to existing public interface | Yes — update existing test      | `"update"`      |
+| New UI component with logic/validation    | Yes — unit test                 | `"unit"`        |
+| Config / build / tooling / docs only      | No                              | `"none"`        |
+| Pure refactor with no behavior change     | Verify with existing tests only | `"none"`        |
 
 Represent each step as a JSON object:
 
@@ -109,9 +121,48 @@ Represent each step as a JSON object:
   "description": "What changes and why",
   "files": ["path/to/file1.ts", "path/to/file2.ts"],
   "test_command": "npm test -- --testPathPattern=auth",
+  "test_type": "unit | integration | update | none",
+  "test_guidance": "1–3 sentences on what to test and which patterns to follow — populated after Step 5.5",
   "commit_message": "feat: add token refresh logic to auth service"
 }
 ```
+
+Draft steps first with `test_type: null`. Step 5.5 (below) will populate `test_type`, `test_guidance`, and add test
+file paths to `files[]`.
+
+## Step 5.5 — Discover Test Patterns
+
+After drafting steps, explore the test infrastructure to fill in `test_type`, `test_guidance`, and test file paths.
+
+**Step A — Detect test files.** Run these Glob patterns against `codebase_path` in order; stop at the first that
+returns results:
+
+1. `**/*.test.ts` or `**/*.spec.ts`
+2. `**/*.test.js` or `**/*.spec.js`
+3. `**/*Test.java` or `**/*Spec.java`
+4. `**/test_*.py` or `**/*_test.py`
+5. `**/*_spec.rb`
+6. `**/tests/**/*`, `**/__tests__/**/*`, `**/spec/**/*`
+
+Record the matching pattern as `detected_test_convention`.
+
+**Step B — Classify unit vs integration.** Among discovered files, classify as integration/e2e if the path includes
+`integration/`, `e2e/`, or `contract/` or the filename contains those words. Remainder = unit tests.
+
+**Step C — Read representative samples.** Read at most 1–2 unit test files + 1–2 integration test files (smallest
+files first). Extract: test framework, assertion library, mock strategy (`jest.mock`, `sinon`, `unittest.mock`, etc.),
+setup/teardown patterns (`beforeEach`, fixtures), file naming convention relative to source files.
+Record as `test_patterns_summary`.
+
+**Step D — If no test files found:** Set `detected_test_convention = null`, `test_patterns_summary = "No existing
+tests found."`, and add to open questions: "No test files were found — what test framework and conventions should be
+used?" Do not add test files to `files[]` for any step.
+
+**Step E — Back-fill step objects.** For each step with a non-`"none"` test_type:
+- Compute the test file path using `detected_test_convention`. If null, skip (open question already added).
+- Add the test file to the step's `files[]`.
+- Write `test_guidance` referencing the patterns found: framework name, describe/it structure, mock approach,
+  the 2–3 specific scenarios to cover.
 
 ## Step 6 — Create the State Directory and Write Snapshot
 
@@ -143,8 +194,8 @@ Generated: <date> | Ticket: <file_prefix>
 <detected language, framework, test runner, key dependencies — one line each>
 
 ## Relevant File Map
-| File | Purpose | Key symbols |
-|------|---------|-------------|
+| File         | Purpose      | Key symbols                  |
+| ------------ | ------------ | ---------------------------- |
 | path/to/file | what it does | exported functions / classes |
 
 ## Key Patterns
@@ -169,14 +220,18 @@ A complete, self-contained HTML file with inline CSS. Include:
 - **Section 1 — Ticket Summary**: Requirements and acceptance criteria listed clearly
 - **Section 2 — Codebase Analysis**: Table of affected files with their role and how they're impacted
 - **Section 3 — Risk Assessment**: Risks color-coded by severity (green = low, yellow = medium, red = high/breaking)
-- **Section 4 — Implementation Plan**: Numbered steps with title, description, files, test command, and commit message
-- **Section 5 — Open Questions**: Anything ambiguous that needs user clarification before implementation
+- **Section 4 — Implementation Plan**: Numbered steps with title, description, files, test command, and commit message.
+  If a step's `test_type` is not `"none"`: show a colored badge for the type and a test-guidance block.
+- **Section 5 — Test Strategy**: Detected test framework and conventions; table mapping each step to test type, test
+  file, and approach; summary of patterns from existing tests. Omit if no test files were found and no steps need tests.
+- **Section 6 — Open Questions**: Anything ambiguous that needs user clarification before implementation
 
 Use clean inline CSS: dark header, white body, code blocks with light gray background, clear section borders.
 
 ### Markdown Report Structure
 
-Use `##` headings, tables for affected files, fenced code blocks for file paths and snippets.
+Use `##` headings, tables for affected files, fenced code blocks for file paths and snippets. Include a
+`## Test Strategy` section between `## Implementation Plan` and `## Open Questions`.
 
 ## Step 8 — Persist State
 
@@ -194,7 +249,13 @@ Write `<codebase_path>/.dev-workflow/<prefix>_state.json`:
   "scope": "<comma-separated scope dirs, or null if full codebase>",
   "report_path": "<codebase_path>/.dev-workflow/<prefix>.<ext>",
   "state_path": "<codebase_path>/.dev-workflow/<prefix>_state.json",
-  "implementation_plan": [<array of step objects from Step 5>],
+  "implementation_plan": [<array of step objects from Step 5 — each with test_type and test_guidance fields>],
+  "test_strategy": {
+    "detected_convention": "<string | null>",
+    "test_framework": "<string | null>",
+    "patterns_summary": "<string>",
+    "steps_needing_tests": [{ "step": 1, "test_type": "unit | integration | update", "test_file": "path/to/file.test.ts" }]
+  },
   "current_step": 0,
   "completed_steps": [],
   "review_iterations": 0
