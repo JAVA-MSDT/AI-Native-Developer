@@ -48,9 +48,23 @@ Test command: <test_command>
 Commit message: <commit_message>
 ```
 
-Ask: "Proceed with this step? (yes / no / show me the files first)"
+Then ask two questions in one prompt:
 
-If the user says "show me the files first", read each file and show the relevant sections, then ask again.
+> "Proceed with this step? And how should tests run?
+>
+> Test execution:
+> - **auto** — I run `<test_command>` and show you the output *(costs tokens — full output enters context)*
+> - **manual** — I skip running tests; you run `<test_command>` yourself and paste the result *(saves tokens)*
+>
+> Reply with both answers together, for example:
+> - `yes auto` — proceed and run tests automatically
+> - `yes manual` — proceed and I'll ask you to run tests yourself
+> - `no` — don't proceed with this step
+> - `show me the files first` — show relevant file sections before deciding"
+
+If the user says "show me the files first", read each file and show the relevant sections, then ask both questions again.
+
+Record the test mode choice (`auto` or `manual`) for use in Step 5. If the user answers only the proceed question and omits test mode, default to `auto`.
 
 Wait for explicit confirmation before proceeding. Do not assume yes.
 
@@ -72,6 +86,8 @@ Determine the test command (in priority order):
 2. The project-level `test_command` from `workflow_state.json` (if set)
 3. Ask the user: "What command should I run to verify this step?"
 
+**If test mode is `auto` (chosen in Step 3):**
+
 Run the resolved test command from `codebase_path`.
 
 **If tests fail:**
@@ -85,6 +101,31 @@ Run the resolved test command from `codebase_path`.
 **If tests pass:**
 
 - Show a summary of passing results
+
+---
+
+**If test mode is `manual` (chosen in Step 3):**
+
+Tell the user:
+
+> "Run this command yourself to verify the step:
+>
+> ```
+> <test_command>
+> ```
+>
+> Reply with:
+> - **passed** — tests green, ready to continue
+> - **failed: \<summary\>** — paste the key failure lines and I'll diagnose
+> - **skip** — proceed without running tests *(not recommended)*"
+
+Wait for the user's reply.
+
+- **passed** → proceed to Step 6.
+- **failed: \<summary\>** → diagnose from the pasted output, propose a fix, re-implement if needed, then ask the user to re-run tests manually and report again.
+- **skip** → proceed to Step 6 with a note: `test_output: "skipped by developer"`.
+
+Do NOT proceed without a response.
 
 ## Step 6 — Show Implementation Summary and Ask for Review
 
@@ -129,7 +170,21 @@ Wait for a response.
 
 **If the user says "not yet":** repeat the git commands and wait again.
 
-**If the user says "yes":** proceed to Step 8 with commit status `"committed"`.
+**If the user says "yes":** Before updating state, verify the commit actually landed:
+
+```bash
+git log --oneline -1
+```
+
+Run this from `codebase_path`. Check that the output contains the expected commit message (`<commit_message from plan>`).
+
+- **If it matches** — proceed to Step 8 with commit status `"committed"`.
+- **If it does not match** — do NOT update state. Show the actual latest commit and tell the user:
+  > "The latest commit doesn't match the expected message for step N. Expected: `<commit_message>`  
+  > Found: `<actual commit line>`  
+  > Please run the git commands above and reply **yes** again once the commit is in place."
+  
+  Repeat the git commands and wait.
 
 **If the user says "later":** proceed to Step 8 with commit status `"later"`. Tell the user:
 > "Noted — step N's changes are implemented but not committed. Remember to commit before pushing or opening a PR.

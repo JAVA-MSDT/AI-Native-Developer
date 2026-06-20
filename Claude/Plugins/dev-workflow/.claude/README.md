@@ -502,7 +502,7 @@ The plugin's `settings.json` grants these permissions automatically:
 | `Bash(git add/commit/revert/log/status/diff/stash:*)` | Committing and rolling back steps        |
 | `Bash(mkdir/cat/echo:*)`                              | Creating the state directory and logging |
 
-A `PostToolUse` hook logs a timestamped line to the terminal after every subagent `Task` call.
+A `Stop` hook logs a timestamped line when the main agent finishes its turn; a `SubagentStop` hook does the same when a subagent finishes.
 
 ### State management
 
@@ -631,3 +631,41 @@ MIT
 - **No external dependencies (by design):** JIRA fetching uses `curl` via Claude's `Bash` tool; all file I/O uses
   Claude's native `Read`/`Write`/`Glob`/`Grep` tools. No npm install, no bundled scripts, no files added to your project
   beyond the Markdown commands themselves.
+
+## To be fixed
+
+- I would like to add this feature
+  - Context
+    - in the implementation steps, if we have file A in step one , then we need to add something to it in another step, we will need to read it again
+    - that means we will use more tokens due to reading the same file twice even tho we need to update something minor or depends.
+  - My idea
+    - during the analysis phase and generating the implementation plan
+    - Generating the plan that takes into consideration the following
+      - is it possible to implement all the change in the targeted file at once or not
+      - If yes we can combine this step to be one step
+      - If not, we can see if the changes will be a lot for the one steps
+    - My point is that we need to be economic when it comes to Tokens, we can do that by making sure that we have a concise implementation steps that will not update the same multiple times, also step that will update only one small change we can combine with other step, there is no need that each step.
+
+- I noticed that if i start running the `/start-ticket-analysis` the plugin will really started again and will start reading everything, should it validate first if there is already analyze exists for that ticket, description or the url, by validating the .dev-workflow exists and the required task for analyze already analyzed before and the developer should use  `/refresh-snapshot` instead and giving a warning about the existence of the file that what is in the .dev-workflow already matching the provided task, also if the dev insist to start the fresh analyze we can inform him to validate the .dev-workflow folder, then deleting it to start a brand new analyze.
+
+- Is there is any possibility to give the developer the chance to use a specific LLM so we can control the Token usage based on the task to be done, because not all the tasks will require a strong LLM, or we can somehow let the Plugin choosing the optimal LLM for the task that will reduce token usage but will still produce hight quality and reliable output and results ?
+
+## To be tested
+
+- For testing
+  - usually when you implement the test cases for the implemented step we run it.
+    - Does running the test cases will required token ?
+      - If no, so run it yourself, If yes, we can give the developer the choice , Would you like to run the test yourself to reduce token ? yes let the developer do it, No do it but after the developer confirm it.
+  - TO BE TESTED
+  
+- I noticed that when it comes to the git merge after the git change and the developer needs to say if he commit the changes or not that there is no verification that the step was really committed
+  - Have you committed step N?                 
+    - yes — committed, ready to continue                      
+    - later — skip commit for now, I'll batch it with the next step
+    - not yet — haven't run the command yet
+  - ❯ yes                                         
+    ● Updating state for step 1. / That should be first checking that the commit is done as expected before proceeding with anything further 
+  - TO BE TESTED
+
+- I can see that the hook is not firing for the agent or the subagent finishes the work.
+  - TO BE TESTED
