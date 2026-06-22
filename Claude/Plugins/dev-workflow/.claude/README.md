@@ -648,7 +648,6 @@ MIT
 
 - I noticed that if i start running the `/start-ticket-analysis` the plugin will really started again and will start reading everything, should it validate first if there is already analyze exists for that ticket, description or the url, by validating the .dev-workflow exists and the required task for analyze already analyzed before and the developer should use  `/refresh-snapshot` instead and giving a warning about the existence of the file that what is in the .dev-workflow already matching the provided task, also if the dev insist to start the fresh analyze we can inform him to validate the .dev-workflow folder, then deleting it to start a brand new analyze.
 
-- Is there is any possibility to give the developer the chance to use a specific LLM so we can control the Token usage based on the task to be done, because not all the tasks will require a strong LLM, or we can somehow let the Plugin choosing the optimal LLM for the task that will reduce token usage but will still produce hight quality and reliable output and results ?
 
 ## To be tested
 
@@ -669,3 +668,6 @@ MIT
 
 - I can see that the hook is not firing for the agent or the subagent finishes the work.
   - TO BE TESTED
+
+- Is there is any possibility to give the developer the chance to use a specific LLM so we can control the Token usage based on the task to be done, because not all the tasks will require a strong LLM, or we can somehow let the Plugin choosing the optimal LLM for the task that will reduce token usage but will still produce hight quality and reliable output and results ?
+  - ToBE TESTED HEAVILY DUE TO ARCHITECTURE CHANGE FROM MONO TO MULTI AGENT AND THE REMOVING OF ORCHESTRATOR 

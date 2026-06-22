@@ -2,103 +2,107 @@ You are executing the `/submit-review-feedback` workflow. Follow every step in o
 
 ## Step 1 — Read State
 
-Read the active state file. First read `<codebase_path>/.dev-workflow/active_state.json` to find the current state file
-path. If `active_state.json` does not exist, look for any `*_state.json` file in `.dev-workflow/` and use the most
-recently modified one.
+Read `<codebase_path>/.dev-workflow/active_state.json` to find the current state file path. If it does not exist,
+look for any `*_state.json` file in `.dev-workflow/` and use the most recently modified one.
 
-If no state file is found, stop and tell the user: "No active analysis found. Run `/start-ticket-analysis` first."
+If no state file is found, stop: "No active analysis found. Run `/start-ticket-analysis` first."
 
-Read the state file and extract: `report_path`, `codebase_path`, `implementation_plan`, `review_iterations`,
-`state_path`, `completed_steps`.
+Extract: `report_path`, `codebase_path`, `implementation_plan`, `review_iterations`, `state_path`,
+`completed_steps`, `output_format`, `file_prefix`.
 
-**Validate required fields.** If any of these are missing or null, stop and tell the user:
-> "The state file is incomplete (missing: `<field list>`). This usually means `/start-ticket-analysis` did not finish
-> successfully. Re-run it to create a fresh analysis."
+**Validate required fields.** Stop if any are missing or null:
+> "The state file is incomplete (missing: `<field list>`). Re-run `/start-ticket-analysis` to create a fresh analysis."
 
 Required: `codebase_path`, `state_path`, `report_path`, `implementation_plan`.
-
-`completed_steps` defaults to `[]` if absent — this is not an error.
+`completed_steps` defaults to `[]` if absent — not an error.
 
 ## Step 2 — Collect Findings
 
 If the user did not pass findings as an argument, ask:
 > "What gaps, errors, or areas need more analysis in the current report?"
 
-Accept any free-form text. The user may paste section excerpts, point to specific requirements, or describe missing
-scenarios.
+Wait for free-form text before proceeding.
 
-## Step 3 — Read the Current Report
+## Step 3 — Spawn reanalysis_agent
 
-Read the current report from `report_path` to understand what was already found and what the open questions were.
+Use the Task tool to spawn `reanalysis_agent` with this prompt:
 
-## Step 4 — Re-analyze Targeted Areas
+```
+Re-analyze the codebase based on reviewer findings.
 
-First, load codebase context without re-exploring from scratch:
+findings: <findings from Step 2>
+current_report_path: <report_path>
+codebase_path: <codebase_path>
+implementation_plan: <implementation_plan JSON>
+completed_steps: <completed_steps JSON>
+```
 
-### 4.0 — Patch snapshot for completed steps (if any)
+Wait for the agent to complete. It returns:
 
-Before reading the snapshot, check whether any implementation steps have already been executed.
+```json
+{
+  "addressed_findings": [{ "finding": "string", "resolution": "string", "plan_changes": "string | null" }],
+  "new_open_questions": ["string"],
+  "updated_implementation_plan": [<full plan array or null if unchanged>],
+  "new_affected_files": ["string"]
+}
+```
 
-If `completed_steps.length > 0`:
+If the agent returns an error, stop and tell the user what went wrong.
 
-1. Collect every unique file path across all `completed_steps[].files` entries into a `changed_files` list.
-2. Tell the user: **"N step(s) already implemented — re-reading changed files to update snapshot before analysis:
-   `<changed_files list>`"**
-3. Read each file in `changed_files` directly from `codebase_path` (live filesystem).
-4. For each file, find its row in the **Relevant File Map** table inside
-   `<codebase_path>/.dev-workflow/codebase_context.md` and update the **Key symbols** column to reflect the
-   current state of that file. Use Edit to patch only the affected rows — do not rewrite the full snapshot.
-5. After patching, add a line at the top of `codebase_context.md` (below the `Generated:` header):
-   ```
-   Patched: <date> | Steps applied: <completed step numbers>
-   ```
+Store the result as `reanalysis_result`.
 
-If `completed_steps` is empty, skip this sub-step entirely.
+## Step 4 — Spawn report_generator_agent
 
-### 4.1 — Load snapshot
+Use the Task tool to spawn `report_generator_agent` with this prompt:
 
-1. Read `<codebase_path>/.dev-workflow/codebase_context.md` — now accurate for all implemented files.
-   Tell the user: **"Reading from codebase snapshot (`codebase_context.md`) for base context."**
+```
+Update the existing report with re-analysis findings. This is review iteration <review_iterations + 1>.
 
-### 4.2 — Targeted re-analysis
+requirements: <reconstructed from state: ticket_source, title from report, requirements from state>
+codebase_path: <codebase_path>
+output_format: <output_format>
+file_prefix: <file_prefix>
+report_path: <report_path>
+scope: <scope from state or null>
+findings: <reanalysis_result JSON>
+review_iteration: <review_iterations + 1>
+```
 
-Then for each gap or finding the user identified:
+Wait for the agent to complete. It returns the same structure as in `/start-ticket-analysis`:
 
-2. Do targeted reads only — use Glob and Grep to find files **directly related to the specific gap**. Do NOT re-explore
-   the full codebase.
-3. For each file you read directly from the codebase (not the snapshot), tell the user: **"Reading `<file path>`
-   directly from codebase."**
-4. Answer open questions where possible.
-5. Check if the gap reveals additional affected files or risks not in the previous analysis.
-6. Check if the implementation plan needs to be updated (new steps, reordered steps, modified file lists).
+```json
+{
+  "report_path": "string",
+  "implementation_plan": [...],
+  "open_questions": ["string"],
+  "affected_files_count": 0,
+  "step_count": 0,
+  "test_strategy": { ... }
+}
+```
 
-## Step 5 — Update the Report
+If the agent returns an error, stop and tell the user what went wrong.
 
-Edit the existing report file in place — do not create a new one.
+Store the result as `report_result`.
 
-Changes to make:
-
-- Add a **"Review Iteration N"** section near the top (after the header, before Section 1) summarizing what was
-  addressed
-- Update the relevant sections with the new analysis
-- Mark previously open questions as ✅ Resolved or ❌ Unresolved
-- Add any new open questions discovered during re-analysis
-- If the implementation plan changed, update Section 4 in full and update the `implementation_plan` in the state file
-
-## Step 6 — Update State
+## Step 5 — Update State
 
 Update the state file at `state_path`:
 
 - Increment `review_iterations` by 1
-- If implementation plan changed, overwrite `implementation_plan` with the updated array
+- If `reanalysis_result.updated_implementation_plan` is not null, overwrite `implementation_plan` with it
+- If `report_result.test_strategy` changed, overwrite `test_strategy`
 
-## Step 7 — Present to User
+## Step 6 — Present to User
 
 Show:
 
-1. What was updated in the report (bullet list)
-2. Which findings were resolved vs still open
+1. Which findings were addressed (from `reanalysis_result.addressed_findings`)
+2. Any new open questions discovered
 3. Whether the implementation plan changed
+4. The report file path
 
-Then say: "Continue reviewing the updated report. Use `/submit-review-feedback` again with more notes, or
-`/approve-step` when you're satisfied and ready to implement."
+Then say:
+> "Continue reviewing the updated report. Use `/submit-review-feedback` again with more notes, or
+> `/approve-step` when you're satisfied and ready to implement."
