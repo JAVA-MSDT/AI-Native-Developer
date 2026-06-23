@@ -17,12 +17,14 @@ You           → Run /start-ticket-analysis
               → Provide: ticket (JIRA ID / URL / pasted text),
                          codebase path, output format (html/md)
 
-Claude        → Fetches or reads the requirements
-              → Explores the codebase (Glob, Grep, Read)
-              → Maps affected files, risks, edge cases
-              → Builds a numbered implementation plan
-              → Writes codebase snapshot to .dev-workflow/codebase_context.md
-              → Writes report to .dev-workflow/<prefix>.html
+Claude        → Spawns ticket_analysis_agent (Haiku):
+                  fetches or reads the requirements, returns structured JSON
+              → Spawns report_generator_agent (Sonnet):
+                  explores the codebase (Glob, Grep, Read)
+                  maps affected files, risks, edge cases
+                  builds a numbered implementation plan
+                  writes codebase snapshot to .dev-workflow/codebase_context.md
+                  writes report to .dev-workflow/<prefix>.html
               → Saves state to .dev-workflow/<prefix>_state.json
 
 You           → Open and read the report
@@ -35,9 +37,13 @@ You           → Run /submit-review-feedback
                 "The auth edge case for expired tokens is missing.
                  Section 3 doesn't cover the background job impact."
 
-Claude        → Re-analyzes the specific areas you flagged
-              → Updates the report in place (adds "Review Iteration N")
-              → Revises the implementation plan if needed
+Claude        → Spawns reanalysis_agent (Sonnet):
+                  patches the snapshot for completed steps
+                  re-analyzes the specific areas you flagged
+                  returns revised findings
+              → Spawns report_generator_agent (Sonnet):
+                  updates the report in place (adds "Review Iteration N")
+                  revises the implementation plan if needed
 
 You           → Review the updated report
               → Repeat as many times as needed
@@ -49,12 +55,20 @@ You           → Run /approve-step
 
 Claude        → Shows you exactly what step N will do:
                 title, files to touch, test command, commit message
-              → Asks for confirmation before touching any code
+              → Asks for confirmation AND test mode before touching any code
 
 You           → Confirm (or ask to show files first)
+              → Choose test mode:
+                - auto   — agent runs tests, full output enters context (costs tokens)
+                - manual — you run the command yourself and paste results (saves tokens)
 
-Claude        → Implements only that step
-              → Runs tests
+Claude        → Spawns implementation_agent (Sonnet):
+                  reads every target file (creates new ones if required)
+                  implements the step
+                  runs tests if auto; skips if manual
+                  verifies all step.files were actually created/modified
+                  returns result JSON (never commits)
+              → If any expected file is missing: re-spawns agent with correction
               → Shows git diff of actual changes
               → Asks: "Does the implementation look correct?"
 
@@ -121,15 +135,16 @@ You           → If pulled changes affect remaining steps:
 
 ## Tech Stack
 
-| Component           | Technology                                                   |
-| ------------------- | ------------------------------------------------------------ |
-| AI runtime          | [Claude Code](https://claude.ai/code) — Claude Sonnet / Opus |
-| Agent orchestration | Claude Code subagents (`.claude/agents/`)                    |
-| Commands            | Claude Code slash commands (`.claude/commands/`)             |
-| Ticket source       | JIRA REST API v3, any URL, or plain text                     |
-| Version control     | Git (`git add`, `git commit`, `git revert`)                  |
-| Report output       | Self-contained HTML (inline CSS) or Markdown                 |
-| State persistence   | JSON files in `<your-project>/.dev-workflow/`                |
+| Component           | Technology                                                                                                             |
+| ------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| AI runtime          | [Claude Code](https://claude.ai/code)                                                                                  |
+| Agent model tiers   | **Haiku** (`ticket_analysis_agent` — parse/fetch only) · **Sonnet** (`report_generator`, `reanalysis`, `implementation`) — see `.claude/models.md` |
+| Agent orchestration | Claude Code subagents (`.claude/agents/`) spawned via the `Task` tool                                                 |
+| Commands            | Claude Code slash commands (`.claude/commands/`) — thin launchers, all user interactions stay inline                  |
+| Ticket source       | JIRA REST API v3, any URL, or plain text                                                                               |
+| Version control     | Git (`git add`, `git commit`, `git revert`)                                                                            |
+| Report output       | Self-contained HTML (inline CSS) or Markdown                                                                           |
+| State persistence   | JSON files in `<your-project>/.dev-workflow/`                                                                          |
 
 No external packages or build tools required — this is a prompt-only plugin.
 
@@ -142,17 +157,17 @@ dev-workflow/
 ├── CLAUDE.md                        ← Plugin entry point (read by Claude Code)
 └── .claude/
     ├── README.md                    ← This file
-    ├── settings.json                ← Permissions and hooks
+    ├── settings.json                ← Permissions and lifecycle hooks
+    ├── models.md                    ← Model tier reference (update here + agent frontmatter when a new model ships)
     ├── agents/
-    │   ├── orchestrator_agent.md    ← Coordinates all phases and state
-    │   ├── ticket_analysis_agent.md ← Fetches/parses requirements from any source
-    │   ├── report_generator_agent.md← Analyzes codebase, builds report + impl plan
-    │   ├── reanalysis_agent.md      ← Targeted re-analysis for reviewer feedback
-    │   └── implementation_agent.md  ← Executes one step, runs tests, commits
+    │   ├── ticket_analysis_agent.md ← Haiku — fetches/parses requirements, returns structured JSON
+    │   ├── report_generator_agent.md← Sonnet — analyzes codebase, builds report + implementation plan
+    │   ├── reanalysis_agent.md      ← Sonnet — patches snapshot, re-analyzes flagged areas
+    │   └── implementation_agent.md  ← Sonnet — edits files, runs tests, returns result JSON (never commits)
     ├── commands/
-    │   ├── start_ticket_analysis.md ← /start-ticket-analysis
-    │   ├── submit_review_feedback.md← /submit-review-feedback
-    │   ├── approve_step.md          ← /approve-step
+    │   ├── start_ticket_analysis.md ← /start-ticket-analysis — thin launcher: spawns ticket_analysis_agent then report_generator_agent
+    │   ├── submit_review_feedback.md← /submit-review-feedback — spawns reanalysis_agent then report_generator_agent
+    │   ├── approve_step.md          ← /approve-step — HITL confirm → spawns implementation_agent → git diff → commit HITL
     │   ├── rollback_step.md         ← /rollback-step
     │   ├── refresh_snapshot.md      ← /refresh-snapshot
     │   └── status.md                ← /status
@@ -161,7 +176,7 @@ dev-workflow/
         ├── analyze_codebase.md      ← Glob + Grep + Read patterns for analysis
         ├── generate_html_report.md  ← HTML report structure and inline CSS spec
         ├── generate_md_report.md    ← Markdown report structure spec
-        └── implement_code_change.md ← Edit + test + commit logic and rollback
+        └── implement_code_change.md ← Edit + test logic and rollback patterns
 ```
 
 ---
@@ -268,6 +283,13 @@ All tests below use the plugin against its own directory — no external project
 
 - Claude asks for any missing inputs before proceeding
 - Claude does NOT accept "yes" or "ok" as a `codebase_path` — rejects and asks again
+- Terminal shows hook output proving agents were spawned:
+  ```
+  [timestamp] >>> Subagent STARTED: ticket_analysis_agent
+  [timestamp] <<< Subagent FINISHED: ticket_analysis_agent
+  [timestamp] >>> Subagent STARTED: report_generator_agent
+  [timestamp] <<< Subagent FINISHED: report_generator_agent
+  ```
 - `.dev-workflow/` folder is created with a `.gitignore` prompt
 - Report created at `.dev-workflow/pasted_add-status-command.html`
 - Report contains: ticket summary, affected files table, risk section, numbered implementation plan, open questions
@@ -356,10 +378,16 @@ Restore the field before continuing.
 
 **What to verify:**
 
-- Claude shows step details (title, description, files, test command, commit message) and asks "Proceed? (yes / no /
-  show me the files first)"
+- Claude shows step details (title, description, files, test command, commit message) and asks two questions together:
+  "Proceed? And how should tests run? (yes auto / yes manual / no / show me the files first)"
 - Claude does NOT implement anything until you explicitly say yes
-- After implementation, Claude runs the test command and shows output
+- Terminal shows hook output confirming implementation_agent was spawned:
+  ```
+  [timestamp] >>> Subagent STARTED: implementation_agent
+  [timestamp] <<< Subagent FINISHED: implementation_agent
+  ```
+- If you chose `auto`: agent ran the test command and output appears in the response
+- If you chose `manual`: Claude asks you to run the command and paste the result before proceeding
 - Claude runs `git diff` and displays the actual diff — not just a description
 - Claude asks "Does the implementation look correct?" before giving the commit command
 - If you say "no" or provide corrections: Claude fixes the code and asks again before giving commit command
@@ -502,7 +530,15 @@ The plugin's `settings.json` grants these permissions automatically:
 | `Bash(git add/commit/revert/log/status/diff/stash:*)` | Committing and rolling back steps        |
 | `Bash(mkdir/cat/echo:*)`                              | Creating the state directory and logging |
 
-A `Stop` hook logs a timestamped line when the main agent finishes its turn; a `SubagentStop` hook does the same when a subagent finishes.
+Three lifecycle hooks log to the terminal with timestamps:
+
+| Hook             | When it fires                        | Output                                          |
+| ---------------- | ------------------------------------ | ----------------------------------------------- |
+| `Stop`           | Main agent finishes its turn         | `[2026-06-22 14:03:01] Agent finished`          |
+| `SubagentStart`  | A subagent is spawned via Task       | `[2026-06-22 14:03:02] >>> Subagent STARTED: ticket_analysis_agent` |
+| `SubagentStop`   | A subagent finishes and returns      | `[2026-06-22 14:03:08] <<< Subagent FINISHED: ticket_analysis_agent` |
+
+The agent name is extracted from the JSON payload Claude Code passes to the hook — it matches the filename in `.claude/agents/` (without `.md`). These hooks let you confirm that agents are actually spawned, not just simulated inline.
 
 ### State management
 
@@ -593,6 +629,11 @@ Previous analyses remain in `.dev-workflow/` untouched.
 | 4   | **State validity check**            | ✅ All three commands (`approve_step`, `submit_review_feedback`, `rollback_step`) validate required fields after reading state.                                                           |
 | 5   | **Analysis scope parameter**        | ✅ Optional `scope` input added to `/start-ticket-analysis`; constrains exploration and snapshot to specified subdirectories.                                                             |
 | 6   | **`/refresh-snapshot` command**     | ✅ Re-explores the codebase and rewrites `codebase_context.md` without touching the state file, report, or implementation plan. Run after any significant pull during an active workflow. |
+| 7   | **Multi-agent architecture**        | ✅ Commands are now thin launchers — each spawns specialized subagents via the `Task` tool. `ticket_analysis_agent` uses Haiku (parse-only); `report_generator_agent`, `reanalysis_agent`, and `implementation_agent` use Sonnet. Model assignments live in `.claude/models.md` + each agent's frontmatter. The `orchestrator_agent.md` (previously unused) was removed. |
+| 8   | **Lifecycle hooks fixed**           | ✅ Previous `PostToolUse { matcher: "Task" }` hook never fired because commands were monolithic. Replaced with `SubagentStart` and `SubagentStop` hooks that extract and print the agent name from the stdin JSON payload — visible proof that each agent is truly spawned. |
+| 9   | **Commit verification**             | ✅ After the developer says "yes" to a commit, `approve_step.md` runs `git log --oneline -1` and checks the output matches the expected commit message before advancing state. |
+| 10  | **Per-step test mode**              | ✅ Before each implementation step, developer chooses `auto` (agent runs tests, full output enters context — costs tokens) or `manual` (developer runs tests, pastes result — saves tokens). Choice is per-step, not session-wide. |
+| 11  | **Missing file guard**              | ✅ Two-layer check: `implementation_agent` self-verifies all `step.files` were touched before returning; `approve_step.md` cross-checks `files_modified` against `step.files` after the agent returns and re-spawns with a correction if any file is missing. Test files are treated as required deliverables, not optional. |
 
 ### Future — Larger Features
 
@@ -671,3 +712,8 @@ MIT
 
 - Is there is any possibility to give the developer the chance to use a specific LLM so we can control the Token usage based on the task to be done, because not all the tasks will require a strong LLM, or we can somehow let the Plugin choosing the optimal LLM for the task that will reduce token usage but will still produce hight quality and reliable output and results ?
   - ToBE TESTED HEAVILY DUE TO ARCHITECTURE CHANGE FROM MONO TO MULTI AGENT AND THE REMOVING OF ORCHESTRATOR 
+- How do i know that each command is really spawned it is own agent and that is not just a log statement?
+
+-  where is the test implementation ?                                                                                                                                                                                                   
+● Good catch — the implementation agent didn't create the integration test. Re-spawning to add it now. 
+- TO BE TESTED

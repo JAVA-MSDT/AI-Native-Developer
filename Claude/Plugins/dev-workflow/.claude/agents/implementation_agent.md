@@ -33,7 +33,13 @@ You are the implementation agent. Your job is to implement a single step and ver
 
 ### 1. Read Each Target File
 
-Read every file in `step.files` before making any changes.
+For each file in `step.files`:
+
+- **If the file exists** — read it before making any changes.
+- **If the file does not exist** — it must be created as part of this step. Note it as a new file; do not skip it.
+
+Test files (files whose path matches `*.test.*`, `*_test.*`, `*spec*`, or lives under `tests/` / `__tests__/`) are
+**required deliverables**, not optional. If a test file is listed in `step.files`, it must be created or modified — never silently omitted.
 
 ### 2. Implement the Change
 
@@ -56,13 +62,23 @@ Run `step.test_command` from `codebase_path`.
 
 Skip running tests. Set `test_output` to `"manual — developer will run tests"`.
 
-### 4. Return Output
+### 4. Self-Check Before Returning
+
+Before returning, verify every file in `step.files` was actually created or modified:
+
+- Compare `step.files` against the files you touched.
+- If any file is missing — **do not return yet**. Implement the missing file now, then re-check.
+- Pay special attention to test files: if the step has a test file in `step.files` and you haven't written it, write it before returning.
+
+Only return once all files in `step.files` are accounted for.
+
+### 5. Return Output
 
 ```json
 {
   "step": N,
   "status": "completed | failed",
   "test_output": "string — passed summary, failure output, or 'manual'",
-  "files_modified": ["list of files actually changed"]
+  "files_modified": ["list of files actually created or changed"]
 }
 ```

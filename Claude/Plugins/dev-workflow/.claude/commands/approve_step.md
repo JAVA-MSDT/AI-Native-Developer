@@ -101,7 +101,17 @@ Show the full `test_output`. Then ask:
 - **skip**: proceed to Step 5 with `test_output: "skipped by developer"`.
 - **rollback**: run `git checkout -- <files_modified>` from `codebase_path`, update state to remove this step, stop.
 
-**If `status` is `"completed"`:** proceed to Step 5.
+**If `status` is `"completed"`:**
+
+Compare `agent_result.files_modified` against `step.files`. If any file from `step.files` is absent from
+`files_modified`, re-spawn `implementation_agent` immediately with:
+
+```
+corrections: "The following files were expected but not created or modified: <missing files list>.
+Implement them now as part of this step."
+```
+
+Do not proceed to Step 5 until `files_modified` accounts for every file in `step.files`.
 
 ## Step 5 — Handle Manual Test Mode
 
