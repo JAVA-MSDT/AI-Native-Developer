@@ -675,6 +675,22 @@ MIT
 
 ## To be fixed
 
+
+## To be tested
+
+- I can see that the hook is not firing for the agent or the subagent finishes the work.
+  - TO BE TESTED
+
+- I would like also to add 
+  - When all the steps are implemented, nothing else to be done and the story finished.
+  - I would like to give the developer the last message which is a Merge Request details as bellow
+    - Title: in that pattern: [Story Number] Story title
+    - Description:
+      - what was the task about
+      - What have been done
+      - What test approaches were used
+- TO BE TESTED
+
 - I would like to add this feature
   - Context
     - in the implementation steps, if we have file A in step one , then we need to add something to it in another step, we will need to read it again
@@ -686,34 +702,7 @@ MIT
       - If yes we can combine this step to be one step
       - If not, we can see if the changes will be a lot for the one steps
     - My point is that we need to be economic when it comes to Tokens, we can do that by making sure that we have a concise implementation steps that will not update the same multiple times, also step that will update only one small change we can combine with other step, there is no need that each step.
+- TO BE TESTED
 
-- I noticed that if i start running the `/start-ticket-analysis` the plugin will really started again and will start reading everything, should it validate first if there is already analyze exists for that ticket, description or the url, by validating the .dev-workflow exists and the required task for analyze already analyzed before and the developer should use  `/refresh-snapshot` instead and giving a warning about the existence of the file that what is in the .dev-workflow already matching the provided task, also if the dev insist to start the fresh analyze we can inform him to validate the .dev-workflow folder, then deleting it to start a brand new analyze.
-
-
-## To be tested
-
-- For testing
-  - usually when you implement the test cases for the implemented step we run it.
-    - Does running the test cases will required token ?
-      - If no, so run it yourself, If yes, we can give the developer the choice , Would you like to run the test yourself to reduce token ? yes let the developer do it, No do it but after the developer confirm it.
-  - TO BE TESTED
-  
-- I noticed that when it comes to the git merge after the git change and the developer needs to say if he commit the changes or not that there is no verification that the step was really committed
-  - Have you committed step N?                 
-    - yes — committed, ready to continue                      
-    - later — skip commit for now, I'll batch it with the next step
-    - not yet — haven't run the command yet
-  - ❯ yes                                         
-    ● Updating state for step 1. / That should be first checking that the commit is done as expected before proceeding with anything further 
-  - TO BE TESTED
-
-- I can see that the hook is not firing for the agent or the subagent finishes the work.
-  - TO BE TESTED
-
-- Is there is any possibility to give the developer the chance to use a specific LLM so we can control the Token usage based on the task to be done, because not all the tasks will require a strong LLM, or we can somehow let the Plugin choosing the optimal LLM for the task that will reduce token usage but will still produce hight quality and reliable output and results ?
-  - ToBE TESTED HEAVILY DUE TO ARCHITECTURE CHANGE FROM MONO TO MULTI AGENT AND THE REMOVING OF ORCHESTRATOR 
-- How do i know that each command is really spawned it is own agent and that is not just a log statement?
-
--  where is the test implementation ?                                                                                                                                                                                                   
-● Good catch — the implementation agent didn't create the integration test. Re-spawning to add it now. 
+- I noticed that if i start running the `/start-ticket-analysis` in the middle of the implementation the plugin will really started again and will start reading everything, should it validate first if there is already analyze exists for that ticket, description or the url, by validating the .dev-workflow exists and the required task for analyze already analyzed before and the developer should use  `/refresh-snapshot` instead and giving a warning about the existence of the file that what is in the .dev-workflow already matching the provided task, also if the dev insist to start the fresh analyze we can inform him to validate the .dev-workflow folder, then deleting it to start a brand new analyze.
 - TO BE TESTED

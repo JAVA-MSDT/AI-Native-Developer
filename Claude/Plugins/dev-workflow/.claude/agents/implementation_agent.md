@@ -49,6 +49,60 @@ Otherwise, implement the step description from scratch.
 Use Edit to make targeted changes. Follow the step description exactly. If anything is ambiguous, ask before
 proceeding — do not guess.
 
+### 2.5 Test Coverage Check (Mandatory — No Step May Skip This)
+
+After implementing the change, always run this check before touching tests or returning output.
+
+**Decision: does this step need test coverage?**
+
+Evaluate the change you just made:
+
+| What changed | Needs test? |
+|---|---|
+| New function, method, class, or module | Yes |
+| New API endpoint, route, or DB query/mutation | Yes |
+| Modified existing public interface or behavior | Yes |
+| New UI component with logic or validation | Yes |
+| Config file, build script, tooling, or docs only | No |
+| Pure mechanical rename or move with no behavior change | No |
+
+If `step.test_type` is `"none"` **and** your own assessment above also says no → skip to Step 3. No test work needed.
+
+If either your assessment says yes **or** `step.test_type` is not `"none"` → continue below.
+
+---
+
+**Find existing test coverage first.**
+
+Do not create a new test file until you have checked whether the change is already coverable by an existing one.
+
+1. Identify the source file(s) you modified (e.g. `src/auth/token.ts`).
+2. Derive the expected test file path from the naming convention in the codebase:
+   - Same name with `.test.` / `.spec.` inserted (e.g. `token.test.ts`, `token.spec.ts`)
+   - Or a mirrored path under `tests/` / `__tests__/` / `spec/`
+3. Check if that file exists with Glob or Read.
+4. If not found by name, Grep the test directory for the function or class name you modified — it may live in a shared test file.
+
+**Case A — Existing test file found that covers this code:**
+- Read the test file.
+- Add or update test cases to cover the new or changed behavior.
+- Cover at minimum: happy path, one edge/boundary case, one error/null case (where applicable).
+- Add the test file to `files_modified` in your return output if it is not already in `step.files`.
+
+**Case B — No existing test file found:**
+- Create a new test file following the naming convention and patterns found in the codebase (framework, describe/it structure, mock strategy, setup/teardown).
+- If no convention was detectable, use the most common pattern for the detected language (Jest for TS/JS, pytest for Python, JUnit for Java).
+- Cover at minimum: happy path, one edge/boundary case, one error/null case (where applicable).
+- Add the new test file to `files_modified`.
+
+**Case C — Test file exists but does not need changes** (e.g. behavior is covered by a broader existing test):
+- Note this explicitly in `test_output`: `"Existing test at <path> already covers this change — no new cases added."`
+- Do not modify the test file.
+
+---
+
+After completing Case A, B, or C, update `step.test_command` if you created a new test file and the original command would not run it. Use the narrowest command that targets only this step's tests.
+
 ### 3. Run Tests
 
 **If `test_mode` is `"auto"`:**

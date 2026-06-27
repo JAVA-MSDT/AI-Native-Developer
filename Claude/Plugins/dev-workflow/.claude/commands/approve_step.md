@@ -23,7 +23,7 @@ Required: `codebase_path`, `state_path`, `implementation_plan`, `current_step`, 
 Look up the step in `implementation_plan` by its `step` number.
 
 If the step number is beyond the last step, tell the user:
-> "All N implementation steps are complete. Review your changes with `git log`."
+> "Story [<ticket_id>] is complete — all N implementation steps are done. There is nothing left to implement. Review your changes with `git log --oneline`."
 
 **Check for pending commits.** Scan `completed_steps` for any entries where `"commit": "later"`. If found:
 
@@ -254,28 +254,35 @@ Update `active_state.json`:
 { "state_path": null }
 ```
 
-Generate and display the PR description:
+Generate and display the Merge Request details:
 
 ```
-## <ticket_id or source type>: <ticket title>
+---
+Story complete. Here is your Merge Request.
+---
 
-### Summary
-<2–3 sentence summary of what was implemented>
+**Title:** [<ticket_id>] <ticket title>
 
-### Changes
-<one bullet per completed step: "- <step title> (`<commit_message>`)" >
+**Description:**
 
-### Files Changed
-<deduplicated list of all files across all completed steps>
+### What was this task about
+<2–3 sentence description of the original story requirements and goals, derived from the ticket>
 
-### Test Coverage
-<list of test commands that were run, one per step>
+### What has been done
+<one bullet per completed step, with a brief sentence explaining what changed>
+- <step title>: <brief implementation summary> (`<commit_message>`)
+
+### What test approaches were used
+<one bullet per step that had a test command, describing the test strategy and outcome>
+- Step N — `<test_command>`: <passed / manual verification / skipped>
+---
 ```
 
 Then tell the user:
-> "All N implementation steps are complete.
+
+> "Story [<ticket_id>] is complete — all N implementation steps are done and there is nothing left to do.
 >
-> - Copy the PR description above into your pull request.
+> - Copy the Merge Request details above into your MR/PR.
 > - State preserved at `.dev-workflow/<prefix>_state.json` — use `/rollback-step` if you need to revert any step.
 > - Review the full change history with `git log --oneline`.
-> - Run `/start-ticket-analysis` when you're ready for the next ticket."
+> - Run `/start-ticket-analysis` when you are ready for the next ticket."

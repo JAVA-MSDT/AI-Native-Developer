@@ -138,6 +138,53 @@ used?" Do not add test files to `files[]` for any step.
 - Write `test_guidance` referencing the patterns found: framework name, describe/it structure, mock approach,
   the 2–3 specific scenarios to cover.
 
+### 2.6 Optimize the Plan for Token Efficiency
+
+After Step 2.5 back-fills test information, run a consolidation pass over the full step list before writing the report.
+The goal is to minimize the number of times the same file must be read and modified across separate steps.
+
+**Rule 1 — Consolidate steps that touch the same file.**
+
+For every file that appears in more than one step's `files[]`:
+
+1. Check if the changes to that file across those steps are logically independent (e.g., adding a new function AND
+   updating an existing function in the same file) or logically sequential (e.g., a schema migration that must run
+   before the ORM model is updated).
+2. **If independent or additive** — merge all steps that share that file into a single step:
+   - Combine `description` fields (enumerate each sub-change clearly).
+   - Union the `files[]` lists (deduplicated).
+   - Keep the most specific `test_command`; if both steps had tests, combine into one command or keep the broader one.
+   - Set `test_type` to the higher-priority of the two (`integration` > `unit` > `update` > `none`).
+   - Merge `test_guidance` to cover all scenarios across the original steps.
+   - Write a single `commit_message` that covers all changes.
+3. **If logically sequential** (the second change depends on the result of the first) — keep them separate.
+   Add a note in the first step's `description`: `"Note: <file> will be revisited in step N+1 because <reason>."`
+   so the implementer understands the repeated read is intentional.
+
+**Rule 2 — Merge trivially small steps.**
+
+Identify steps where:
+- `files[]` contains only one file, AND
+- `description` describes a single minor change (config value, one import, one constant, one line)
+
+Merge such a step into the nearest adjacent step that shares a logical concern or the same module area.
+Update the receiving step's `description`, `files[]`, `test_command`, `test_type`, `test_guidance`, and
+`commit_message` accordingly.
+
+Do **not** merge if doing so would violate the ordering rules (schema before app code, infrastructure before
+features) or make the resulting step too large to reason about in one pass.
+
+**Rule 3 — Re-number steps.**
+
+After all merges, re-number the remaining steps starting from 1 in sequential order. Update every `"step"` field.
+
+**Rule 4 — Record the consolidation rationale.**
+
+For every merge performed, add a one-line note at the top of the merged step's `description`:
+> `"[Consolidated from N steps: <brief reason>]"`
+
+This makes the decision transparent in the report and helps reviewers understand the plan shape.
+
 ### 3. Generate the Report
 
 Write the report to `report_path` received in the inputs.

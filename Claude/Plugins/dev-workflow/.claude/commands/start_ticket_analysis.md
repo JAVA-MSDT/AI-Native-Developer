@@ -23,6 +23,84 @@ You need these inputs. If they were not passed as arguments, ask the user for al
   `src/auth,src/api`). When provided, the codebase exploration and snapshot will be constrained to those directories
   only.
 
+## Step 1.5 — Check for Existing Analysis (Collision Guard)
+
+Before creating any files or spawning any agents, check whether an active analysis already exists for this codebase.
+
+### Part A — Does `.dev-workflow/` exist?
+
+Check if `<codebase_path>/.dev-workflow/` exists.
+
+- **If it does not exist** → no collision possible. Proceed to Step 2.
+- **If it exists** → continue to Part B.
+
+### Part B — Is there an active session?
+
+Read `<codebase_path>/.dev-workflow/active_state.json`.
+
+- **If the file does not exist**, or it exists but `state_path` is `null` → no active session. Proceed to Step 2.
+- **If `state_path` points to a valid state file** → read that state file and continue to Part C.
+
+### Part C — Does the active state match the provided ticket?
+
+Compare `ticket_source` against the active state using these rules in order:
+
+| `ticket_source` type | Match condition |
+|---|---|
+| JIRA ticket ID (e.g. `PROJ-123`) | `ticket_source` equals `state.ticket_id` (case-insensitive) |
+| URL | `ticket_source` equals `state.ticket_source` |
+| Pasted text | Any active state present — cannot match by content at this stage |
+
+**If a same-ticket match is found:**
+
+> ⚠ An analysis for **[`state.ticket_id` or `state.ticket_source`]** already exists in `.dev-workflow/`.
+>
+> - Phase: `<state.phase>` — Step `<state.current_step>` of `<state.implementation_plan.length>`
+> - Report: `<state.report_path>`
+> - Last updated: `<state file modification date if readable>`
+>
+> Starting a new analysis would discard this progress.
+>
+> **What would you like to do?**
+> - **continue** — go back to where you left off (`/approve-step` to implement, `/refresh-snapshot` if the codebase changed)
+> - **fresh** — start a brand new analysis (you must delete `.dev-workflow/` first — see instructions below)
+> - **cancel** — stop and decide later
+
+Wait for the user's response.
+
+- **continue** → Stop. Tell the user exactly which command to use next based on `state.phase`:
+  - `"review"` → "Run `/submit-review-feedback` to refine the plan, or `/approve-step` to start implementing."
+  - `"implementation"` → "Run `/approve-step` to continue with step `<state.current_step + 1>`: `<next step title>`."
+  - Any other → "Run `/status` to see the current state."
+- **fresh** → Tell the user:
+  > "To start a fresh analysis, delete the existing session data first:
+  > ```
+  > rm -rf "<codebase_path>/.dev-workflow"
+  > ```
+  > Then re-run `/start-ticket-analysis` with the same inputs."
+  Stop. Do not proceed.
+- **cancel** → Stop silently.
+
+**If a different-ticket match is found** (active state exists but for a different ticket):
+
+> ⚠ A different analysis is already active in `.dev-workflow/`:
+>
+> - Active ticket: **`<state.ticket_id or state.ticket_source>`**
+> - Phase: `<state.phase>` — Step `<state.current_step>` of `<state.implementation_plan.length>`
+>
+> Starting a new analysis for **`<ticket_source>`** will write into the same `.dev-workflow/` folder alongside the existing session.
+>
+> **What would you like to do?**
+> - **proceed** — continue and create a new analysis alongside the existing one (both state files will coexist)
+> - **fresh** — clear `.dev-workflow/` entirely and start clean (you must delete the folder first)
+> - **cancel** — stop and decide later
+
+Wait for the user's response.
+
+- **proceed** → Continue to Step 2 normally.
+- **fresh** → Same instructions as above (delete `.dev-workflow/`, re-run).
+- **cancel** → Stop silently.
+
 ## Step 2 — Derive File Names
 
 From the ticket title or first sentence of pasted text, generate a short slug:
@@ -64,7 +142,8 @@ Check if `<codebase_path>/.gitignore` exists. If it does and `.dev-workflow/` is
 
 If yes, append `.dev-workflow/` to the `.gitignore` file.
 
-Also delete `<codebase_path>/.dev-workflow/codebase_context.md` if it exists — always regenerate fresh for each new ticket.
+Delete `<codebase_path>/.dev-workflow/codebase_context.md` if it exists — regenerate fresh for this ticket.
+(This is safe: Step 1.5 already confirmed there is no active session, so the snapshot is stale or from a completed ticket.)
 
 ## Step 4 — Spawn ticket_analysis_agent
 
