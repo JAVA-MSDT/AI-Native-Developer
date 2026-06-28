@@ -61,7 +61,36 @@ In both cases, document:
 
 ### 2. Build the Implementation Plan
 
-Create a numbered, ordered sequence of self-contained steps. Ordering rules:
+**Start with a File Impact Map — do this before drafting any steps.**
+
+For every file that needs to change, list ALL the changes required in that file across the entire ticket:
+
+```
+File: path/to/FileA.java
+  - Add import for NewClass
+  - Annotate field balance with @MaskMe
+  - Register NewConverter in setupConverters()
+
+File: path/to/NewClass.java  (new file)
+  - Implement full class
+
+File: path/to/Controller.java
+  - Add new endpoint method
+```
+
+Once the map is complete, apply this rule to each file:
+
+> **Can all the changes to this file be written in a single edit, knowing what the earlier steps will have produced?**
+> If yes → those changes belong in one step, regardless of how many "concerns" they cover.
+> If no → split only at the point where a runtime or compile artifact from a prior step is needed (see below).
+
+Then group files into steps by **feature cohesion**: files whose changes are meaningless without each other
+(e.g., a new class + the config that registers it + the annotation that uses it) belong in the same step because:
+- They can only be tested together as a unit
+- Splitting them just to "separate concerns" wastes implementation cycles and forces multiple reads of dependent files
+- Each intermediate state (class without registration, annotation without converter) is broken and untestable
+
+**Ordering rules for steps:**
 
 - Database/schema changes before application code
 - Infrastructure before features
@@ -74,14 +103,22 @@ Create a numbered, ordered sequence of self-contained steps. Ordering rules:
 |---|---|---|
 | New public function, class, or module | Yes — unit test | `"unit"` |
 | New API endpoint or DB query/mutation | Yes — integration test | `"integration"` |
-| Modification to existing public interface | Yes — update existing test | `"update"` |
+| Modification to existing public interface that changes observable behavior | Yes — update existing test | `"update"` |
 | New UI component with logic/validation | Yes — unit test | `"unit"` |
 | Config / build / tooling / docs only | No | `"none"` |
 | Pure refactor with no behavior change | Verify with existing tests only | `"none"` |
+| Adding annotation/decorator to existing symbol with no behavior change | No — existing tests verify as smoke check | `"none"` |
+| One-line config/registration change | No — verified by full build | `"none"` |
+
+**Critical distinction for `test_type: "update"`**: This type means the test **file itself requires code changes** (new
+test cases written, existing assertions modified). Do NOT use `"update"` merely because existing passing tests serve as
+a regression check — that is `"none"`. Misclassifying a trivial change as `"update"` to give it apparent substance
+defeats Rule 2 of the consolidation pass.
 
 For steps with `test_type != "none"`:
 - Determine the test file path from the naming convention found in Step 2.5 (below). Add the test file to `files[]`.
-- For `test_type: "update"`, find the existing test file matching the source file name.
+- For `test_type: "update"`, find the existing test file matching the source file name. Only assign this type if you
+  will write new test code or modify existing test cases in that file.
 - Populate `test_guidance` with 1–3 sentences: what to test and which patterns to follow (framework, describe/it
   structure, mock pattern, key scenarios: happy path, null input, error case).
 
@@ -141,25 +178,51 @@ used?" Do not add test files to `files[]` for any step.
 ### 2.6 Optimize the Plan for Token Efficiency
 
 After Step 2.5 back-fills test information, run a consolidation pass over the full step list before writing the report.
-The goal is to minimize the number of times the same file must be read and modified across separate steps.
+The goal is to minimize implementation cycles and eliminate redundant file reads.
 
-**Rule 1 — Consolidate steps that touch the same file.**
+**Rule 0 — Group files by feature cohesion before applying file-level rules.**
 
-For every file that appears in more than one step's `files[]`:
+Before checking individual files, look at the full step list and ask: are there steps whose changes are only
+testable together? A new class, the config line that registers it, and the annotation that activates it form one
+feature unit — none of them does anything useful alone. Merge steps whose combined changes represent the smallest
+independently testable and committable unit of behavior.
 
-1. Check if the changes to that file across those steps are logically independent (e.g., adding a new function AND
-   updating an existing function in the same file) or logically sequential (e.g., a schema migration that must run
-   before the ORM model is updated).
-2. **If independent or additive** — merge all steps that share that file into a single step:
-   - Combine `description` fields (enumerate each sub-change clearly).
-   - Union the `files[]` lists (deduplicated).
-   - Keep the most specific `test_command`; if both steps had tests, combine into one command or keep the broader one.
-   - Set `test_type` to the higher-priority of the two (`integration` > `unit` > `update` > `none`).
-   - Merge `test_guidance` to cover all scenarios across the original steps.
-   - Write a single `commit_message` that covers all changes.
-3. **If logically sequential** (the second change depends on the result of the first) — keep them separate.
-   Add a note in the first step's `description`: `"Note: <file> will be revisited in step N+1 because <reason>."`
-   so the implementer understands the repeated read is intentional.
+Signs that two steps should be merged into one:
+- Neither step produces a state that passes tests on its own
+- The test for one step is identical to the test for the other
+- One step's change is the direct prerequisite for the other AND both can be written in one pass
+
+After this cross-file grouping pass, proceed to Rule 1.
+
+---
+
+**Rule 1 — No file should appear in more than one step unless there is a hard runtime dependency.**
+
+For every file that appears in more than one step's `files[]`, apply this test:
+
+> **Can the implementer write ALL changes to this file in a single session, knowing what the earlier steps will
+> produce?** If yes — those changes MUST be merged into one step.
+
+The only valid reason to split a file across two steps is a **hard runtime dependency**: the output of step N
+must exist at runtime or compile-time before the code for step N+1 can be determined. Examples:
+- A database migration must run before the ORM model column can be referenced in code
+- A code-generation step must execute before the generated types can be imported
+- A compiled artifact from step N is needed as input to step N+1
+
+**Conceptual ordering alone is NOT a valid reason to split.** If change B in a file "logically follows" change A
+but both can be written in one pass (because you know what A looks like), merge them. Splitting on conceptual
+ordering creates broken intermediate states and forces the implementation agent to read the same file twice.
+
+**Merge action for Rule 1:**
+- Combine `description` fields, enumerating each sub-change clearly.
+- Union the `files[]` lists (deduplicated).
+- Keep the most specific `test_command`; if both had tests, use the broader one.
+- Set `test_type` to the higher-priority (`integration` > `unit` > `update` > `none`).
+- Merge `test_guidance` to cover all scenarios.
+- Write a single `commit_message` covering all changes.
+
+**When a hard runtime dependency genuinely exists**, keep the steps separate and add a note in the first step's
+`description`: `"Note: <file> will be revisited in step N+1 — <runtime reason>."`
 
 **Rule 2 — Enforce a minimum substance threshold for every step.**
 
@@ -169,12 +232,17 @@ behavior. Apply this check to every step in the plan — including steps that su
 A step is **trivial** (must be merged) if its entire implementation amounts to any of the following:
 
 - Adding or renaming a single variable, constant, or field
-- Adding an annotation, decorator, or attribute to an existing symbol (`@Injectable`, `@Override`, `readonly`, etc.)
+- Adding an annotation, decorator, or attribute to an existing symbol (`@Injectable`, `@Override`, `@MaskMe`, `readonly`, etc.)
 - Adding a single import statement or re-export line
 - Declaring an empty class, interface, or type alias with no logic
-- Adding a single configuration key or environment variable entry
+- Adding a single configuration key, registration call, or environment variable entry
 - Adding a one-line guard clause or null-check to an existing function
 - Any combination of the above within a single file that would take under ~5 minutes to implement
+
+**A `test_type` of `"update"` does NOT rescue a trivial step from this rule** unless the test file itself requires
+new or modified test code. Running existing passing tests as a smoke check does not constitute test surface — it is
+just verification. If the guidance for `test_type: "update"` would be "existing tests should still pass unchanged",
+that step is still trivial.
 
 These changes do not need their own step because they generate no meaningful test surface, consume tokens for
 spawning the implementation agent, and add no reviewer value as standalone steps.
