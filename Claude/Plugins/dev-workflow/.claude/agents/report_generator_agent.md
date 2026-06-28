@@ -161,18 +161,34 @@ For every file that appears in more than one step's `files[]`:
    Add a note in the first step's `description`: `"Note: <file> will be revisited in step N+1 because <reason>."`
    so the implementer understands the repeated read is intentional.
 
-**Rule 2 — Merge trivially small steps.**
+**Rule 2 — Enforce a minimum substance threshold for every step.**
 
-Identify steps where:
-- `files[]` contains only one file, AND
-- `description` describes a single minor change (config value, one import, one constant, one line)
+A step must justify its own implementation cycle: real code work that a developer must think through AND test-worthy
+behavior. Apply this check to every step in the plan — including steps that survived Rule 1.
 
-Merge such a step into the nearest adjacent step that shares a logical concern or the same module area.
+A step is **trivial** (must be merged) if its entire implementation amounts to any of the following:
+
+- Adding or renaming a single variable, constant, or field
+- Adding an annotation, decorator, or attribute to an existing symbol (`@Injectable`, `@Override`, `readonly`, etc.)
+- Adding a single import statement or re-export line
+- Declaring an empty class, interface, or type alias with no logic
+- Adding a single configuration key or environment variable entry
+- Adding a one-line guard clause or null-check to an existing function
+- Any combination of the above within a single file that would take under ~5 minutes to implement
+
+These changes do not need their own step because they generate no meaningful test surface, consume tokens for
+spawning the implementation agent, and add no reviewer value as standalone steps.
+
+**Merge action:** Absorb the trivial step into the nearest adjacent step that shares a logical concern, module
+boundary, or the same target file. If no adjacent step is a natural fit, attach it to the step immediately before it.
 Update the receiving step's `description`, `files[]`, `test_command`, `test_type`, `test_guidance`, and
-`commit_message` accordingly.
+`commit_message` to cover the absorbed change.
 
-Do **not** merge if doing so would violate the ordering rules (schema before app code, infrastructure before
-features) or make the resulting step too large to reason about in one pass.
+**Do not merge if:**
+- Merging would violate ordering rules (schema before app code, infrastructure before features).
+- The receiving step already touches more than 5 files — absorbing more would make it unreviewable.
+- The trivial change is a prerequisite that must land and be verified before the next step can be implemented
+  (e.g., a type alias that changes the public API contract relied on by the next step).
 
 **Rule 3 — Re-number steps.**
 
