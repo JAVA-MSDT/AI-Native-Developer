@@ -13,11 +13,22 @@ Automates ticket analysis, iterative review, and step-by-step implementation wit
 - `/refresh-snapshot` re-explores the codebase and rewrites the snapshot without touching the state file, report, or
   implementation plan — use after a significant `git pull` mid-ticket
 - Builds a structured, self-contained implementation plan as part of the report
+- **Token-efficient plan generation** — consolidates steps that touch the same file into one, and eliminates trivially
+  small steps (single annotations, variable declarations, import lines) by absorbing them into adjacent substantive
+  steps; every step in the final plan represents real implementation work
 - Validates state file integrity on every command — clear error if a previous run failed mid-way
+- **Collision guard on `/start-ticket-analysis`** — before doing any work, detects if an active session already exists
+  for the same ticket and prompts to continue, start fresh (by deleting `.dev-workflow/`), or cancel; prevents
+  accidentally discarding in-progress analysis mid-implementation
 - Supports unlimited review/feedback iterations — report updates in place
 - Shows `git diff` after each implementation step so review is based on real changes
-- HITL confirmation before each step; developer runs git commands manually — after each step choose **yes** (committed now), **later** (batch with upcoming steps), or **not yet** (re-prompt); uncommitted steps are tracked and surfaced at PR description time
-- Generates a ready-to-paste PR description when all implementation steps are complete
+- HITL confirmation before each step; developer runs git commands manually — after each step choose **yes** (committed now), **later** (batch with upcoming steps), or **not yet** (re-prompt); uncommitted steps are tracked and surfaced at MR description time
+- **Mandatory test coverage check on every implementation step** — after each code change the agent independently
+  assesses whether tests are needed, searches for existing test files first, and either updates them or creates new
+  ones; no step completes without an explicit test verdict
+- Generates a ready-to-paste Merge Request description when all steps are complete — title formatted as
+  `[Story Number] Story title`, with sections for what the task was about, what was done, and what test approaches
+  were used
 - Rollback any step with `git revert` — git history is always preserved
 - Writes all state and reports to `<your-project>/.dev-workflow/` — never inside the plugin itself
 

@@ -10,6 +10,8 @@ Generate a complete, self-contained HTML analysis report with inline CSS.
 - `open_questions`: Array of unanswered questions
 - `review_iteration`: Integer (0 = initial, 1+ = updated)
 - `output_path`: Where to write the file
+- `test_strategy`: Object with `detected_convention`, `test_framework`, `patterns_summary`,
+  `steps_needing_tests[]` (each: step, test_type, test_file, test_guidance)
 
 ## HTML Structure
 
@@ -48,6 +50,12 @@ Generate a complete, self-contained HTML analysis report with inline CSS.
                   margin-right: 10px; font-size: 0.85rem; }
     .badge-updated { background: #ffc107; color: #333; padding: 2px 8px;
                      border-radius: 10px; font-size: 0.75rem; margin-left: 8px; }
+    .test-badge { padding: 2px 8px; border-radius: 10px; font-size: 0.75rem; font-weight: bold; }
+    .test-badge-unit { background: #0d6efd; color: white; }
+    .test-badge-integration { background: #6610f2; color: white; }
+    .test-badge-update { background: #fd7e14; color: white; }
+    .test-guidance { background: #f0f4ff; border-left: 3px solid #0d6efd;
+                     padding: 8px 12px; margin-top: 8px; font-size: 0.875rem; }
   </style>
 </head>
 <body>
@@ -92,10 +100,34 @@ Generate a complete, self-contained HTML analysis report with inline CSS.
     <section id="plan">
       <h2>Implementation Plan</h2>
       {implementation_plan as step-cards with step-badge}
-      Each card shows: title, description, files (as <code>), test_command, commit_message
+      Each card shows: title, description, files (as <code>), test_command, commit_message.
+      If step.test_type is not null and not "none": render a
+      <span class="test-badge test-badge-{test_type}">{test_type}</span> next to the step title, and a
+      <div class="test-guidance">{step.test_guidance}</div> below the description.
     </section>
 
-    <!-- Section 5: Open Questions -->
+    <!-- Section 5: Test Strategy -->
+    {if test_strategy and (test_strategy.detected_convention or test_strategy.steps_needing_tests.length > 0)}
+    <section id="test-strategy">
+      <h2>Test Strategy</h2>
+      <p><strong>Framework:</strong> {test_strategy.test_framework or "Unknown"}</p>
+      <p><strong>File naming convention:</strong> {test_strategy.detected_convention or "Not detected"}</p>
+      <h3>Pattern Summary</h3>
+      <p>{test_strategy.patterns_summary}</p>
+      {if test_strategy.steps_needing_tests.length > 0}
+      <h3>Coverage by Step</h3>
+      <table>
+        <tr><th>Step</th><th>Type</th><th>Test File</th><th>Approach</th></tr>
+        {steps_needing_tests as <tr> rows — step number, badge span, <code>test_file</code>, test_guidance text}
+      </table>
+      {/if}
+      {if test_strategy.detected_convention is null}
+      <p class="risk-medium">No existing tests found. Confirm test framework before implementing test steps.</p>
+      {/if}
+    </section>
+    {/if}
+
+    <!-- Section 6: Open Questions -->
     {if open_questions.length > 0}
     <section id="questions">
       <h2>Open Questions</h2>
@@ -118,5 +150,36 @@ Generate a complete, self-contained HTML analysis report with inline CSS.
 
 ## Writing the File
 
-Write the complete HTML to `output_path` using the Write tool. The file must be fully self-contained — no external CSS,
-fonts, or JS references.
+Write the HTML **incrementally** — one section at a time — rather than generating the entire file in a single Write
+call. This keeps each write focused, prevents content from being dropped due to context pressure, and makes it easy to
+verify completeness before moving on.
+
+### Step 1 — Write the skeleton
+
+Write the file with `<!DOCTYPE html>`, `<head>` (title + full `<style>` block), `<body>`, `<header>`, and an empty
+`<main></main>`. Use the Write tool. The file now exists with correct structure and all CSS.
+
+### Step 2 — Append sections one at a time
+
+Use the Edit tool to insert each section into `<main>` in order. After inserting each section, re-read the relevant
+portion of the file to confirm the content is present and correct before continuing.
+
+1. **Ticket Summary** (`<section id="summary">`) — requirements and acceptance criteria
+2. **Codebase Analysis** (`<section id="codebase">`) — affected files table + patterns
+3. **Risk Assessment** (`<section id="risks">`) — risk rows and edge cases
+4. **Implementation Plan** (`<section id="plan">`) — one step-card per implementation step; include test-type badge
+   and test-guidance block on each step where `test_type != "none"`
+5. **Test Strategy** (`<section id="test-strategy">`) — only if `test_strategy` is present; framework, convention,
+   coverage table
+6. **Open Questions** (`<section id="questions">`) — only if `open_questions.length > 0`
+7. **Review History** (`<section id="iterations">`) — only if `review_iteration > 0`
+
+### Step 3 — Final verification
+
+After all sections are inserted, read the full file and verify:
+- Every acceptance criterion appears in the Ticket Summary
+- Every affected file appears in the Codebase Analysis table
+- Every implementation step has a card in the Plan section
+- Step count in the `<header>` meta line matches the actual number of step-cards
+
+If anything is missing, insert the missing content with Edit before returning.

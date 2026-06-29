@@ -17,12 +17,19 @@ You           → Run /start-ticket-analysis
               → Provide: ticket (JIRA ID / URL / pasted text),
                          codebase path, output format (html/md)
 
-Claude        → Fetches or reads the requirements
-              → Explores the codebase (Glob, Grep, Read)
-              → Maps affected files, risks, edge cases
-              → Builds a numbered implementation plan
-              → Writes codebase snapshot to .dev-workflow/codebase_context.md
-              → Writes report to .dev-workflow/<prefix>.html
+Claude        → Collision guard (Step 1.5):
+                  checks .dev-workflow/ for an active session matching this ticket
+                  if found: prompts continue / fresh / cancel before doing anything
+              → Spawns ticket_analysis_agent (Haiku):
+                  fetches or reads the requirements, returns structured JSON
+              → Spawns report_generator_agent (Sonnet):
+                  explores the codebase (Glob, Grep, Read)
+                  maps affected files, risks, edge cases
+                  builds a numbered implementation plan
+                  consolidates steps that touch the same file
+                  eliminates trivially small steps (annotations, imports, single variables)
+                  writes codebase snapshot to .dev-workflow/codebase_context.md
+                  writes report to .dev-workflow/<prefix>.html
               → Saves state to .dev-workflow/<prefix>_state.json
 
 You           → Open and read the report
@@ -35,9 +42,13 @@ You           → Run /submit-review-feedback
                 "The auth edge case for expired tokens is missing.
                  Section 3 doesn't cover the background job impact."
 
-Claude        → Re-analyzes the specific areas you flagged
-              → Updates the report in place (adds "Review Iteration N")
-              → Revises the implementation plan if needed
+Claude        → Spawns reanalysis_agent (Sonnet):
+                  patches the snapshot for completed steps
+                  re-analyzes the specific areas you flagged
+                  returns revised findings
+              → Spawns report_generator_agent (Sonnet):
+                  updates the report in place (adds "Review Iteration N")
+                  revises the implementation plan if needed
 
 You           → Review the updated report
               → Repeat as many times as needed
@@ -49,12 +60,25 @@ You           → Run /approve-step
 
 Claude        → Shows you exactly what step N will do:
                 title, files to touch, test command, commit message
-              → Asks for confirmation before touching any code
+              → Asks for confirmation AND test mode before touching any code
 
 You           → Confirm (or ask to show files first)
+              → Choose test mode:
+                - auto   — agent runs tests, full output enters context (costs tokens)
+                - manual — you run the command yourself and paste results (saves tokens)
 
-Claude        → Implements only that step
-              → Runs tests
+Claude        → Spawns implementation_agent (Sonnet):
+                  reads every target file (creates new ones if required)
+                  implements the step
+                  mandatory test coverage check (Step 2.5):
+                    assesses whether this change needs tests
+                    searches for existing test files first (by name, then by Grep)
+                    updates existing tests (Case A), creates new ones (Case B),
+                    or notes existing coverage is sufficient (Case C)
+                  runs tests if auto; skips if manual
+                  verifies all step.files were actually created/modified
+                  returns result JSON (never commits)
+              → If any expected file is missing: re-spawns agent with correction
               → Shows git diff of actual changes
               → Asks: "Does the implementation look correct?"
 
@@ -70,7 +94,9 @@ You           → Run the commit command yourself, then answer:
                 - "not yet"→ repeat the command, workflow holds
               → Run /approve-step for the next step
               → OR run /rollback-step if something needs to be undone
-              → On the last step: receive a ready-to-paste PR description
+              → On the last step: receive a ready-to-paste Merge Request description
+                  Title: [Story Number] Story title
+                  Sections: what the task was about · what was done · test approaches used
 
 ROLLBACK  (any time during implementation)
 ─────────────────────────────────────────────────────────────────────
@@ -108,11 +134,14 @@ You           → If pulled changes affect remaining steps:
 - Optional `scope` parameter constrains analysis to specific subdirectories — essential for large repos
 - Analyzes the codebase against requirements and generates a full HTML or Markdown report
 - Writes a `codebase_context.md` snapshot — reused by review iterations to avoid redundant file reads
+- **Token-efficient plan generation** — consolidates steps that would touch the same file multiple times and eliminates trivially small steps (single annotations, imports, variable declarations) by absorbing them into adjacent substantive steps; every step in the final plan represents real implementation work with a testable surface
+- **Collision guard** — `/start-ticket-analysis` detects an active session for the same ticket before doing any work; prompts to continue, start fresh, or cancel; prevents accidentally discarding in-progress analysis mid-implementation
 - Builds a structured, self-contained implementation plan as part of the report
 - Supports unlimited review/feedback iterations — report updates in place
 - Shows `git diff` after each implementation step — review real changes, not Claude's description
+- **Mandatory test coverage check on every step** — after each code change the implementation agent independently assesses whether tests are needed, searches for existing test files first (by naming convention, then by Grep), and either updates them, creates new ones, or documents that existing coverage is sufficient; no step completes without an explicit test verdict
 - Implements code step-by-step with HITL confirmation before each step; developer runs git commands manually; after each step choose **yes** (committed), **later** (batch with future steps), or **not yet** (re-prompt)
-- Generates a ready-to-paste PR description when all steps are complete
+- Generates a ready-to-paste Merge Request description when all steps are complete — title formatted as `[Story Number] Story title`, with sections for what the task was about, what was done, and what test approaches were used
 - Rollback any step with `git revert` — git history is always preserved
 - Validates state file integrity on every command — clear error if a previous run failed mid-way
 - Persists workflow state in `<your-project>/.dev-workflow/` — survives session restarts
@@ -121,15 +150,16 @@ You           → If pulled changes affect remaining steps:
 
 ## Tech Stack
 
-| Component           | Technology                                                   |
-| ------------------- | ------------------------------------------------------------ |
-| AI runtime          | [Claude Code](https://claude.ai/code) — Claude Sonnet / Opus |
-| Agent orchestration | Claude Code subagents (`.claude/agents/`)                    |
-| Commands            | Claude Code slash commands (`.claude/commands/`)             |
-| Ticket source       | JIRA REST API v3, any URL, or plain text                     |
-| Version control     | Git (`git add`, `git commit`, `git revert`)                  |
-| Report output       | Self-contained HTML (inline CSS) or Markdown                 |
-| State persistence   | JSON files in `<your-project>/.dev-workflow/`                |
+| Component           | Technology                                                                                                                                         |
+| ------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| AI runtime          | [Claude Code](https://claude.ai/code)                                                                                                              |
+| Agent model tiers   | **Haiku** (`ticket_analysis_agent` — parse/fetch only) · **Sonnet** (`report_generator`, `reanalysis`, `implementation`) — see `.claude/models.md` |
+| Agent orchestration | Claude Code subagents (`.claude/agents/`) spawned via the `Task` tool                                                                              |
+| Commands            | Claude Code slash commands (`.claude/commands/`) — thin launchers, all user interactions stay inline                                               |
+| Ticket source       | JIRA REST API v3, any URL, or plain text                                                                                                           |
+| Version control     | Git (`git add`, `git commit`, `git revert`)                                                                                                        |
+| Report output       | Self-contained HTML (inline CSS) or Markdown                                                                                                       |
+| State persistence   | JSON files in `<your-project>/.dev-workflow/`                                                                                                      |
 
 No external packages or build tools required — this is a prompt-only plugin.
 
@@ -142,17 +172,17 @@ dev-workflow/
 ├── CLAUDE.md                        ← Plugin entry point (read by Claude Code)
 └── .claude/
     ├── README.md                    ← This file
-    ├── settings.json                ← Permissions and hooks
+    ├── settings.json                ← Permissions and lifecycle hooks
+    ├── models.md                    ← Model tier reference (update here + agent frontmatter when a new model ships)
     ├── agents/
-    │   ├── orchestrator_agent.md    ← Coordinates all phases and state
-    │   ├── ticket_analysis_agent.md ← Fetches/parses requirements from any source
-    │   ├── report_generator_agent.md← Analyzes codebase, builds report + impl plan
-    │   ├── reanalysis_agent.md      ← Targeted re-analysis for reviewer feedback
-    │   └── implementation_agent.md  ← Executes one step, runs tests, commits
+    │   ├── ticket_analysis_agent.md ← Haiku — fetches/parses requirements, returns structured JSON
+    │   ├── report_generator_agent.md← Sonnet — analyzes codebase, builds report + implementation plan
+    │   ├── reanalysis_agent.md      ← Sonnet — patches snapshot, re-analyzes flagged areas
+    │   └── implementation_agent.md  ← Sonnet — edits files, runs tests, returns result JSON (never commits)
     ├── commands/
-    │   ├── start_ticket_analysis.md ← /start-ticket-analysis
-    │   ├── submit_review_feedback.md← /submit-review-feedback
-    │   ├── approve_step.md          ← /approve-step
+    │   ├── start_ticket_analysis.md ← /start-ticket-analysis — thin launcher: spawns ticket_analysis_agent then report_generator_agent
+    │   ├── submit_review_feedback.md← /submit-review-feedback — spawns reanalysis_agent then report_generator_agent
+    │   ├── approve_step.md          ← /approve-step — HITL confirm → spawns implementation_agent → git diff → commit HITL
     │   ├── rollback_step.md         ← /rollback-step
     │   ├── refresh_snapshot.md      ← /refresh-snapshot
     │   └── status.md                ← /status
@@ -161,7 +191,7 @@ dev-workflow/
         ├── analyze_codebase.md      ← Glob + Grep + Read patterns for analysis
         ├── generate_html_report.md  ← HTML report structure and inline CSS spec
         ├── generate_md_report.md    ← Markdown report structure spec
-        └── implement_code_change.md ← Edit + test + commit logic and rollback
+        └── implement_code_change.md ← Edit + test logic and rollback patterns
 ```
 
 ---
@@ -268,6 +298,13 @@ All tests below use the plugin against its own directory — no external project
 
 - Claude asks for any missing inputs before proceeding
 - Claude does NOT accept "yes" or "ok" as a `codebase_path` — rejects and asks again
+- Terminal shows hook output proving agents were spawned:
+  ```
+  [timestamp] >>> Subagent STARTED: ticket_analysis_agent
+  [timestamp] <<< Subagent FINISHED: ticket_analysis_agent
+  [timestamp] >>> Subagent STARTED: report_generator_agent
+  [timestamp] <<< Subagent FINISHED: report_generator_agent
+  ```
 - `.dev-workflow/` folder is created with a `.gitignore` prompt
 - Report created at `.dev-workflow/pasted_add-status-command.html`
 - Report contains: ticket summary, affected files table, risk section, numbered implementation plan, open questions
@@ -356,10 +393,16 @@ Restore the field before continuing.
 
 **What to verify:**
 
-- Claude shows step details (title, description, files, test command, commit message) and asks "Proceed? (yes / no /
-  show me the files first)"
+- Claude shows step details (title, description, files, test command, commit message) and asks two questions together:
+  "Proceed? And how should tests run? (yes auto / yes manual / no / show me the files first)"
 - Claude does NOT implement anything until you explicitly say yes
-- After implementation, Claude runs the test command and shows output
+- Terminal shows hook output confirming implementation_agent was spawned:
+  ```
+  [timestamp] >>> Subagent STARTED: implementation_agent
+  [timestamp] <<< Subagent FINISHED: implementation_agent
+  ```
+- If you chose `auto`: agent ran the test command and output appears in the response
+- If you chose `manual`: Claude asks you to run the command and paste the result before proceeding
 - Claude runs `git diff` and displays the actual diff — not just a description
 - Claude asks "Does the implementation look correct?" before giving the commit command
 - If you say "no" or provide corrections: Claude fixes the code and asks again before giving commit command
@@ -392,16 +435,21 @@ After committing step 1 manually (run the git commands Claude provided), run:
 
 ---
 
-#### Test 7 — Completion and PR description
+#### Test 7 — Completion and Merge Request description
 
 Implement all steps (run `/approve-step` repeatedly, committing each step manually). On the final step:
 
 **What to verify:**
 
-- After you say "looks good" on the last step: Claude generates a PR description with ticket title, summary, per-step
-  bullets with commit messages, full files-changed list, and test commands
+- After you say "looks good" on the last step: Claude announces "Story [ticket_id] is complete — all N implementation
+  steps are done and there is nothing left to do"
+- Claude generates a Merge Request description with:
+  - **Title** formatted as `[Story Number] Story title`
+  - **What was this task about** — 2–3 sentences from the original ticket requirements
+  - **What has been done** — one bullet per completed step with implementation summary and commit message
+  - **What test approaches were used** — per-step test command and outcome (passed / manual / skipped)
 - `active_state.json` is updated to `{"state_path": null}`
-- Running `/approve-step` again shows "All N steps are complete" — not an error
+- Running `/approve-step` again shows "Story [ticket_id] is complete — all N steps are done" — not an error
 
 ---
 
@@ -467,6 +515,46 @@ rm .claude/commands/test_placeholder.md
 
 ---
 
+#### Test 11 — Collision guard (same-ticket re-run)
+
+After Test 1 (with an active workflow in place), run `/start-ticket-analysis` again with the **same** ticket source:
+
+```
+/start-ticket-analysis
+  ticket_source = "Add a /status command that shows the current workflow state"
+  codebase_path = .
+```
+
+**What to verify:**
+
+- Claude does NOT proceed to spawn any agents or create any files
+- Claude detects the active session and displays a warning showing:
+  - The matching ticket source
+  - The current phase and step progress
+  - The path to the existing report
+- Claude presents three options: **continue** / **fresh** / **cancel**
+- Reply **continue**: Claude tells you exactly which command to use next based on the current phase
+  (`/approve-step` if in implementation, `/submit-review-feedback` or `/approve-step` if in review)
+- Reply **fresh**: Claude tells you to delete `.dev-workflow/` manually and re-run — it does NOT delete it automatically
+- Reply **cancel**: Claude stops with no changes
+
+Now run `/start-ticket-analysis` with a **different** ticket source (different-ticket path):
+
+```
+/start-ticket-analysis
+  ticket_source = "Add rollback support for multi-step sequences"
+  codebase_path = .
+```
+
+**What to verify:**
+
+- Claude detects the existing session is for a different ticket
+- Claude warns that a different analysis is already active and shows its ticket details
+- Claude presents **proceed** / **fresh** / **cancel**
+- Reply **proceed**: Claude continues to Step 2 and spawns agents normally — both state files coexist
+
+---
+
 ## Configuration
 
 ### JIRA credentials
@@ -502,7 +590,15 @@ The plugin's `settings.json` grants these permissions automatically:
 | `Bash(git add/commit/revert/log/status/diff/stash:*)` | Committing and rolling back steps        |
 | `Bash(mkdir/cat/echo:*)`                              | Creating the state directory and logging |
 
-A `PostToolUse` hook logs a timestamped line to the terminal after every subagent `Task` call.
+Three lifecycle hooks log to the terminal with timestamps:
+
+| Hook            | When it fires                   | Output                                                               |
+| --------------- | ------------------------------- | -------------------------------------------------------------------- |
+| `Stop`          | Main agent finishes its turn    | `[2026-06-22 14:03:01] Agent finished`                               |
+| `SubagentStart` | A subagent is spawned via Task  | `[2026-06-22 14:03:02] >>> Subagent STARTED: ticket_analysis_agent`  |
+| `SubagentStop`  | A subagent finishes and returns | `[2026-06-22 14:03:08] <<< Subagent FINISHED: ticket_analysis_agent` |
+
+The agent name is extracted from the JSON payload Claude Code passes to the hook — it matches the filename in `.claude/agents/` (without `.md`). These hooks let you confirm that agents are actually spawned, not just simulated inline.
 
 ### State management
 
@@ -531,8 +627,11 @@ Key fields in the state file:
 | `completed_steps`     | Array of completed steps with commit status                        |
 | `review_iterations`   | Number of feedback cycles completed                                |
 
-**To start a new analysis:** just run `/start-ticket-analysis` — it creates new files with the new ticket's name.
-Previous analyses remain in `.dev-workflow/` untouched.
+**To start a new analysis on a different ticket:** run `/start-ticket-analysis` with the new ticket — the collision
+guard detects it is a different ticket and lets you proceed (both state files coexist in `.dev-workflow/`).
+
+**To restart an analysis for the same ticket:** the collision guard will detect the existing session and stop. To
+force a fresh start, delete `.dev-workflow/` first, then re-run `/start-ticket-analysis`.
 
 **To reset everything:** delete the `.dev-workflow/` folder from your project root.
 
@@ -585,14 +684,23 @@ Previous analyses remain in `.dev-workflow/` untouched.
 
 ### Done — Implemented
 
-| #   | What                                | Status                                                                                                                                                                                   |
-| --- | ----------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1   | **`git diff` after implementation** | ✅ `approve_step.md` Step 6 now runs `git diff` and displays the full output before asking for review.                                                                                    |
-| 2   | **Snapshot regeneration guarantee** | ✅ Snapshot write moved to Step 6 (after `mkdir`); old `codebase_context.md` deleted before each new run.                                                                                 |
-| 3   | **PR description on completion**    | ✅ `approve_step.md` Step 9 generates a copy-ready PR description when all steps complete.                                                                                                |
-| 4   | **State validity check**            | ✅ All three commands (`approve_step`, `submit_review_feedback`, `rollback_step`) validate required fields after reading state.                                                           |
-| 5   | **Analysis scope parameter**        | ✅ Optional `scope` input added to `/start-ticket-analysis`; constrains exploration and snapshot to specified subdirectories.                                                             |
-| 6   | **`/refresh-snapshot` command**     | ✅ Re-explores the codebase and rewrites `codebase_context.md` without touching the state file, report, or implementation plan. Run after any significant pull during an active workflow. |
+| #   | What                                | Status                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| --- | ----------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | **`git diff` after implementation** | ✅ `approve_step.md` Step 6 now runs `git diff` and displays the full output before asking for review.                                                                                                                                                                                                                                                                                                                                                                   |
+| 2   | **Snapshot regeneration guarantee** | ✅ Snapshot write moved to Step 6 (after `mkdir`); old `codebase_context.md` deleted before each new run.                                                                                                                                                                                                                                                                                                                                                                |
+| 3   | **PR description on completion**    | ✅ `approve_step.md` Step 9 generates a copy-ready PR description when all steps complete.                                                                                                                                                                                                                                                                                                                                                                               |
+| 4   | **State validity check**            | ✅ All three commands (`approve_step`, `submit_review_feedback`, `rollback_step`) validate required fields after reading state.                                                                                                                                                                                                                                                                                                                                          |
+| 5   | **Analysis scope parameter**        | ✅ Optional `scope` input added to `/start-ticket-analysis`; constrains exploration and snapshot to specified subdirectories.                                                                                                                                                                                                                                                                                                                                            |
+| 6   | **`/refresh-snapshot` command**     | ✅ Re-explores the codebase and rewrites `codebase_context.md` without touching the state file, report, or implementation plan. Run after any significant pull during an active workflow.                                                                                                                                                                                                                                                                                |
+| 7   | **Multi-agent architecture**        | ✅ Commands are now thin launchers — each spawns specialized subagents via the `Task` tool. `ticket_analysis_agent` uses Haiku (parse-only); `report_generator_agent`, `reanalysis_agent`, and `implementation_agent` use Sonnet. Model assignments live in `.claude/models.md` + each agent's frontmatter. The `orchestrator_agent.md` (previously unused) was removed.                                                                                                 |
+| 8   | **Lifecycle hooks fixed**           | ✅ Previous `PostToolUse { matcher: "Task" }` hook never fired because commands were monolithic. Replaced with `SubagentStart` and `SubagentStop` hooks that extract and print the agent name from the stdin JSON payload — visible proof that each agent is truly spawned.                                                                                                                                                                                              |
+| 9   | **Commit verification**             | ✅ After the developer says "yes" to a commit, `approve_step.md` runs `git log --oneline -1` and checks the output matches the expected commit message before advancing state.                                                                                                                                                                                                                                                                                           |
+| 10  | **Per-step test mode**              | ✅ Before each implementation step, developer chooses `auto` (agent runs tests, full output enters context — costs tokens) or `manual` (developer runs tests, pastes result — saves tokens). Choice is per-step, not session-wide.                                                                                                                                                                                                                                       |
+| 11  | **Missing file guard**              | ✅ Two-layer check: `implementation_agent` self-verifies all `step.files` were touched before returning; `approve_step.md` cross-checks `files_modified` against `step.files` after the agent returns and re-spawns with a correction if any file is missing. Test files are treated as required deliverables, not optional.                                                                                                                                             |
+| 12  | **Merge Request description**       | ✅ On final step completion `approve_step.md` Step 9 generates a ready-to-paste MR description: title as `[Story Number] Story title`; three sections — what the task was about, what was done (per-step bullets with commit messages), and what test approaches were used. A clear "Story complete — nothing left to do" message signals workflow end.                                                                                                                  |
+| 13  | **Token-efficient plan generation** | ✅ `report_generator_agent.md` Step 2.6 runs a consolidation pass after drafting steps: Rule 1 merges steps that touch the same file (if changes are logically independent); Rule 2 enforces a minimum substance threshold — trivially small steps (annotations, single variables, imports, empty class declarations, one-liner guards) are absorbed into adjacent substantive steps; Rule 3 re-numbers; Rule 4 records consolidation rationale in the step description. |
+| 14  | **Mandatory test coverage check**   | ✅ `implementation_agent.md` Step 2.5 runs on every step without exception: a decision table determines if the change needs tests; existing test files are searched first by naming convention then by Grep; Case A (update existing), Case B (create new), Case C (document sufficient existing coverage). `test_command` is updated if a new test file was created that the original command would miss.                                                               |
+| 15  | **Collision guard**                 | ✅ `start_ticket_analysis.md` Step 1.5 checks `.dev-workflow/active_state.json` before doing any work: same-ticket match shows continue/fresh/cancel with phase-specific next-command guidance; different-ticket match shows proceed/fresh/cancel. Fresh-start instructions tell the developer to delete `.dev-workflow/` manually — the plugin never auto-deletes in-progress work.                                                                                     |
 
 ### Future — Larger Features
 
@@ -610,8 +718,10 @@ These require more work but would meaningfully extend the plugin's value.
   model's context at the time. Always read the report critically.
 - **Large codebases** — for repos over ~500k LOC, the snapshot will inevitably be incomplete. Treat the analysis as
   directional, not exhaustive.
-- **Trivial tickets** — the analysis overhead is not worth it for one-liner changes, config updates, or renames. Use the
-  plugin for medium-to-large features and non-trivial bug fixes.
+- **Trivial tickets** — the analysis overhead is not worth it for one-liner changes, config updates, or renames. The
+  plan optimizer (Step 2.6) will collapse trivial changes into larger steps, but if the entire ticket is trivial the
+  full analysis/review/implementation cycle is still more friction than just editing the file directly. Use the plugin
+  for medium-to-large features and non-trivial bug fixes.
 
 ---
 
