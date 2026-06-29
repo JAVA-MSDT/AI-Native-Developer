@@ -10,8 +10,8 @@ You need these inputs. If they were not passed as arguments, ask the user for al
     - Plain text / pasted requirements — use directly
 
 - **codebase_path** *(required)*: An absolute or relative directory path (e.g., `C:\Projects\MyApp` or `../myapp`). Do
-  not default to `.` — ask explicitly if not provided. If the user provides something that is not a path (e.g., "yes", "
-  ok", a sentence), reject it and ask again: "That doesn't look like a path. Please provide the directory path to your
+  not default to `.` — ask explicitly if not provided. If the user provides something that is not a path (e.g., "yes",
+  "ok", a sentence), reject it and ask again: "That doesn't look like a path. Please provide the directory path to your
   codebase (e.g., `C:\Projects\MyApp` or `.` for the current directory)."
 
 - **output_format**: `html` or `md` (default: `html`)
@@ -21,39 +21,89 @@ You need these inputs. If they were not passed as arguments, ask the user for al
 
 - **scope** *(optional)*: One or more subdirectory paths relative to `codebase_path`, comma-separated (e.g.,
   `src/auth,src/api`). When provided, the codebase exploration and snapshot will be constrained to those directories
-  only. Use this for large repos where the ticket clearly affects a known subsystem. If not provided, the full codebase
-  is analyzed.
+  only.
 
-## Step 2 — Fetch or Parse the Requirements
+## Step 1.5 — Check for Existing Analysis (Collision Guard)
 
-Determine the ticket source type:
+Before creating any files or spawning any agents, check whether an active analysis already exists for this codebase.
 
-**JIRA ticket ID** (matches pattern like `PROJ-123`, `ABC-456`):
-Use environment variables `JIRA_URL`, `JIRA_USERNAME`, `JIRA_API_KEY`:
+### Part A — Does `.dev-workflow/` exist?
 
-```bash
-curl -s -u "$JIRA_USERNAME:$JIRA_API_KEY" \
-  "$JIRA_URL/rest/api/3/issue/$TICKET_SOURCE" \
-  -H "Accept: application/json"
-```
+Check if `<codebase_path>/.dev-workflow/` exists.
 
-Parse the response to extract: summary, description, acceptance criteria, linked issues.
-If env vars are missing or the call fails, fall through to the "pasted text" path below.
+- **If it does not exist** → no collision possible. Proceed to Step 2.
+- **If it exists** → continue to Part B.
 
-**URL** (starts with `http://` or `https://`):
-Fetch the page content. Extract the main requirements text — look for headings like "Description", "Acceptance
-Criteria", "Requirements", "Definition of Done".
+### Part B — Is there an active session?
 
-**Pasted text / free-form requirements**:
-Use the provided text directly as the requirements. Parse it for acceptance criteria markers like "AC:", "- [ ]", "
-Must", "Should".
+Read `<codebase_path>/.dev-workflow/active_state.json`.
 
-In all cases, if the content is ambiguous or acceptance criteria are not clearly identifiable, note this as an open
-question in the report.
+- **If the file does not exist**, or it exists but `state_path` is `null` → no active session. Proceed to Step 2.
+- **If `state_path` points to a valid state file** → read that state file and continue to Part C.
 
-## Step 3 — Derive File Names
+### Part C — Does the active state match the provided ticket?
 
-From the ticket title (or first sentence of pasted text), generate a short slug:
+Compare `ticket_source` against the active state using these rules in order:
+
+| `ticket_source` type | Match condition |
+|---|---|
+| JIRA ticket ID (e.g. `PROJ-123`) | `ticket_source` equals `state.ticket_id` (case-insensitive) |
+| URL | `ticket_source` equals `state.ticket_source` |
+| Pasted text | Any active state present — cannot match by content at this stage |
+
+**If a same-ticket match is found:**
+
+> ⚠ An analysis for **[`state.ticket_id` or `state.ticket_source`]** already exists in `.dev-workflow/`.
+>
+> - Phase: `<state.phase>` — Step `<state.current_step>` of `<state.implementation_plan.length>`
+> - Report: `<state.report_path>`
+> - Last updated: `<state file modification date if readable>`
+>
+> Starting a new analysis would discard this progress.
+>
+> **What would you like to do?**
+> - **continue** — go back to where you left off (`/approve-step` to implement, `/refresh-snapshot` if the codebase changed)
+> - **fresh** — start a brand new analysis (you must delete `.dev-workflow/` first — see instructions below)
+> - **cancel** — stop and decide later
+
+Wait for the user's response.
+
+- **continue** → Stop. Tell the user exactly which command to use next based on `state.phase`:
+  - `"review"` → "Run `/submit-review-feedback` to refine the plan, or `/approve-step` to start implementing."
+  - `"implementation"` → "Run `/approve-step` to continue with step `<state.current_step + 1>`: `<next step title>`."
+  - Any other → "Run `/status` to see the current state."
+- **fresh** → Tell the user:
+  > "To start a fresh analysis, delete the existing session data first:
+  > ```
+  > rm -rf "<codebase_path>/.dev-workflow"
+  > ```
+  > Then re-run `/start-ticket-analysis` with the same inputs."
+  Stop. Do not proceed.
+- **cancel** → Stop silently.
+
+**If a different-ticket match is found** (active state exists but for a different ticket):
+
+> ⚠ A different analysis is already active in `.dev-workflow/`:
+>
+> - Active ticket: **`<state.ticket_id or state.ticket_source>`**
+> - Phase: `<state.phase>` — Step `<state.current_step>` of `<state.implementation_plan.length>`
+>
+> Starting a new analysis for **`<ticket_source>`** will write into the same `.dev-workflow/` folder alongside the existing session.
+>
+> **What would you like to do?**
+> - **proceed** — continue and create a new analysis alongside the existing one (both state files will coexist)
+> - **fresh** — clear `.dev-workflow/` entirely and start clean (you must delete the folder first)
+> - **cancel** — stop and decide later
+
+Wait for the user's response.
+
+- **proceed** → Continue to Step 2 normally.
+- **fresh** → Same instructions as above (delete `.dev-workflow/`, re-run).
+- **cancel** → Stop silently.
+
+## Step 2 — Derive File Names
+
+From the ticket title or first sentence of pasted text, generate a short slug:
 
 - Lowercase the title
 - Replace spaces and special characters with hyphens
@@ -66,56 +116,16 @@ Build the file prefix:
 - URL source: `url_<slug>` (e.g., `url_add-status-command`)
 - Pasted text: `pasted_<slug>` (e.g., `pasted_add-status-command`)
 
-Report file: `<prefix>.<ext>` (e.g., `PROJ-123_add-token-refresh.html`)
-State file: `<prefix>_state.json` (e.g., `PROJ-123_add-token-refresh_state.json`)
+Derive paths:
+- `report_path` = `<codebase_path>/.dev-workflow/<prefix>.<output_format>`
+- `state_path` = `<codebase_path>/.dev-workflow/<prefix>_state.json`
 
-Both files will live in `<codebase_path>/.dev-workflow/`.
+> **Note on slug generation:** For JIRA tickets and URLs you don't yet know the title — use a temporary placeholder
+> slug like `pending` for now. You will replace it once `ticket_analysis_agent` returns the actual title.
 
-## Step 4 — Explore the Codebase
+## Step 3 — Prepare State Directory
 
-Determine the exploration root:
-
-- If `scope` was provided, explore only `<codebase_path>/<scope_dir>` for each directory listed. Note the scope
-  constraint in the snapshot header.
-- If `scope` was not provided, explore from `codebase_path` (full codebase).
-
-Using Read, Glob, and Grep on the exploration root:
-
-1. Map the top-level project structure — understand what kind of project this is, what language/framework, and where the
-   key entry points are.
-2. For each requirement or acceptance criterion from the ticket:
-    - Use Glob to find relevant files by name patterns
-    - Use Grep to find relevant functions, classes, or keywords
-    - Read the most relevant files to understand the implementation
-    - Trace callsites and dependencies
-3. Document: affected files, functions, modules, and any third-party dependencies touched. Hold these findings in
-   memory — the snapshot will be written in Step 6 once the state directory exists.
-
-## Step 5 — Build the Implementation Plan
-
-Create a numbered, ordered list of self-contained implementation steps. Each step must:
-
-- Have one clear, single purpose
-- Only touch the files listed for that step
-- Be independently committable and verifiable
-- Include a test command or validation criteria
-
-Represent each step as a JSON object:
-
-```json
-{
-  "step": 1,
-  "title": "Short imperative title",
-  "description": "What changes and why",
-  "files": ["path/to/file1.ts", "path/to/file2.ts"],
-  "test_command": "npm test -- --testPathPattern=auth",
-  "commit_message": "feat: add token refresh logic to auth service"
-}
-```
-
-## Step 6 — Create the State Directory and Write Snapshot
-
-Create `<codebase_path>/.dev-workflow/` if it does not exist:
+Create the output directory if it does not exist:
 
 ```bash
 mkdir -p "<codebase_path>/.dev-workflow"
@@ -132,90 +142,117 @@ Check if `<codebase_path>/.gitignore` exists. If it does and `.dev-workflow/` is
 
 If yes, append `.dev-workflow/` to the `.gitignore` file.
 
-**Write the codebase snapshot.** Delete `<codebase_path>/.dev-workflow/codebase_context.md` if it already exists (always
-regenerate — never reuse a stale snapshot from a previous run). Then write a fresh one using the findings from Step 4:
+Delete `<codebase_path>/.dev-workflow/codebase_context.md` if it exists — regenerate fresh for this ticket.
+(This is safe: Step 1.5 already confirmed there is no active session, so the snapshot is stale or from a completed ticket.)
 
-```markdown
-# Codebase Context
-Generated: <date> | Ticket: <file_prefix>
+## Step 4 — Spawn ticket_analysis_agent
 
-## Tech Stack
-<detected language, framework, test runner, key dependencies — one line each>
+Use the Task tool to spawn `ticket_analysis_agent` with this prompt:
 
-## Relevant File Map
-| File | Purpose | Key symbols |
-|------|---------|-------------|
-| path/to/file | what it does | exported functions / classes |
+```
+Analyze the following ticket source and return structured requirements JSON.
 
-## Key Patterns
-<architecture patterns, naming conventions, auth approach, DB layer, error handling — bullet points>
-
-## Entry Points
-<files that bootstrap the app, register routes, or are the main execution entry>
+ticket_source: <ticket_source>
 ```
 
-This snapshot is the single source of codebase context for all subsequent agents — they read it instead of re-exploring
-the codebase.
+Wait for the agent to complete. It returns:
 
-## Step 7 — Generate the Report
+```json
+{
+  "source_type": "jira | url | pasted",
+  "ticket_id": "PROJ-123 | null",
+  "title": "string",
+  "description": "string",
+  "requirements": ["string"],
+  "acceptance_criteria": ["string"],
+  "type": "feature | bug | tech_debt | other",
+  "notes": ["string"]
+}
+```
 
-Write the report to `<codebase_path>/.dev-workflow/<prefix>.<ext>`.
+If the agent returns an error or empty content, stop and tell the user what went wrong.
 
-### HTML Report Structure
+Store the result as `requirements`.
 
-A complete, self-contained HTML file with inline CSS. Include:
+**Now finalize the file prefix** using the real title from `requirements.title`. Rebuild `file_prefix`, `report_path`,
+and `state_path` with the actual slug.
 
-- **Header**: Ticket ID (or source type), title, date generated
-- **Section 1 — Ticket Summary**: Requirements and acceptance criteria listed clearly
-- **Section 2 — Codebase Analysis**: Table of affected files with their role and how they're impacted
-- **Section 3 — Risk Assessment**: Risks color-coded by severity (green = low, yellow = medium, red = high/breaking)
-- **Section 4 — Implementation Plan**: Numbered steps with title, description, files, test command, and commit message
-- **Section 5 — Open Questions**: Anything ambiguous that needs user clarification before implementation
+## Step 5 — Spawn report_generator_agent
 
-Use clean inline CSS: dark header, white body, code blocks with light gray background, clear section borders.
+Use the Task tool to spawn `report_generator_agent` with this prompt:
 
-### Markdown Report Structure
+```
+Generate a full analysis report and implementation plan.
 
-Use `##` headings, tables for affected files, fenced code blocks for file paths and snippets.
+requirements: <requirements JSON from Step 4>
+codebase_path: <codebase_path>
+output_format: <output_format>
+file_prefix: <file_prefix>
+report_path: <report_path>
+scope: <scope or null>
+```
 
-## Step 8 — Persist State
+Wait for the agent to complete. It returns:
 
-Write `<codebase_path>/.dev-workflow/<prefix>_state.json`:
+```json
+{
+  "report_path": "string",
+  "implementation_plan": [{ "step": 1, "title": "...", "description": "...", "files": [], "test_command": "...", "test_type": "...", "test_guidance": "...", "commit_message": "..." }],
+  "open_questions": ["string"],
+  "affected_files_count": 0,
+  "step_count": 0,
+  "test_strategy": {
+    "detected_convention": "string | null",
+    "test_framework": "string | null",
+    "patterns_summary": "string",
+    "steps_needing_tests": [{ "step": 1, "test_type": "unit | integration | update", "test_file": "path/to/file.test.ts" }]
+  }
+}
+```
+
+If the agent returns an error, stop and tell the user what went wrong.
+
+Store the result as `report_result`.
+
+## Step 6 — Persist State
+
+Write `<state_path>`:
 
 ```json
 {
   "phase": "review",
   "ticket_source": "<jira_id | url | 'pasted'>",
   "ticket_id": "<id if jira, else null>",
-  "file_prefix": "<prefix>",
-  "codebase_path": "<path>",
+  "file_prefix": "<file_prefix>",
+  "codebase_path": "<codebase_path>",
   "output_format": "<html|md>",
   "test_command": "<project test command, or null if not provided>",
-  "scope": "<comma-separated scope dirs, or null if full codebase>",
-  "report_path": "<codebase_path>/.dev-workflow/<prefix>.<ext>",
-  "state_path": "<codebase_path>/.dev-workflow/<prefix>_state.json",
-  "implementation_plan": [<array of step objects from Step 5>],
+  "scope": "<comma-separated scope dirs, or null>",
+  "report_path": "<report_path>",
+  "state_path": "<state_path>",
+  "implementation_plan": "<report_result.implementation_plan>",
+  "test_strategy": "<report_result.test_strategy>",
   "current_step": 0,
   "completed_steps": [],
   "review_iterations": 0
 }
 ```
 
-Also write a pointer file at `<codebase_path>/.dev-workflow/active_state.json` containing just:
+Write `<codebase_path>/.dev-workflow/active_state.json`:
 
 ```json
-{ "state_path": "<codebase_path>/.dev-workflow/<prefix>_state.json" }
+{ "state_path": "<state_path>" }
 ```
 
-This allows other commands to find the current active analysis without knowing the prefix.
-
-## Step 9 — Present to User
+## Step 7 — Present to User
 
 Show:
 
-1. A 3–5 bullet summary of the most important findings
+1. A 3–5 bullet summary of the most important findings from `report_result`
 2. The report file path
 3. The number of implementation steps identified
+4. Any open questions flagged by the agent
 
-Then say: "Review the report at `<report_path>`. Use `/submit-review-feedback` with your notes to refine the analysis,
-or `/approve-step` when you're ready to begin implementing."
+Then say:
+> "Review the report at `<report_path>`. Use `/submit-review-feedback` with your notes to refine the analysis,
+> or `/approve-step` when you're ready to begin implementing."

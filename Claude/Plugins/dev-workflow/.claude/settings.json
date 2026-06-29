@@ -18,13 +18,32 @@
     ]
   },
   "hooks": {
-    "PostToolUse": [
+    "Stop": [
       {
-        "matcher": "Task",
         "hooks": [
           {
             "type": "command",
-            "command": "echo \"[$(date '+%Y-%m-%d %H:%M:%S')] Subagent task completed\""
+            "command": "echo \"[$(date '+%Y-%m-%d %H:%M:%S')] Agent finished\""
+          }
+        ]
+      }
+    ],
+    "SubagentStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "agent=$(cat | python3 -c \"import sys,json; d=json.load(sys.stdin); print(d.get('agent_name','unknown'))\" 2>/dev/null || echo 'unknown'); echo \"[$(date '+%Y-%m-%d %H:%M:%S')] >>> Subagent STARTED: $agent\""
+          }
+        ]
+      }
+    ],
+    "SubagentStop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "agent=$(cat | python3 -c \"import sys,json; d=json.load(sys.stdin); print(d.get('agent_name','unknown'))\" 2>/dev/null || echo 'unknown'); echo \"[$(date '+%Y-%m-%d %H:%M:%S')] <<< Subagent FINISHED: $agent\""
           }
         ]
       }

@@ -10,6 +10,8 @@ Generate a Markdown analysis report.
 - `open_questions`: Array of unanswered questions
 - `review_iteration`: Integer (0 = initial, 1+ = updated)
 - `output_path`: Where to write the file
+- `test_strategy`: Object with `detected_convention`, `test_framework`, `patterns_summary`,
+  `steps_needing_tests[]` (each: step, test_type, test_file, test_guidance)
 
 ## Markdown Structure
 
@@ -41,8 +43,8 @@ Generate a Markdown analysis report.
 
 ## Codebase Analysis
 
-| File | Role | Impact |
-|------|------|--------|
+| File              | Role        | Impact      |
+| ----------------- | ----------- | ----------- |
 | `path/to/file.ts` | description | description |
 
 ### Relevant Patterns Found
@@ -53,8 +55,8 @@ Generate a Markdown analysis report.
 
 ## Risk Assessment
 
-| Risk | Severity | Mitigation |
-|------|----------|------------|
+| Risk        | Severity                  | Mitigation |
+| ----------- | ------------------------- | ---------- |
 | description | 🔴 High / 🟡 Medium / 🟢 Low | mitigation |
 
 ### Edge Cases
@@ -74,6 +76,10 @@ Generate a Markdown analysis report.
 
 **Test**: `{test_command}`
 
+**Test Type**: `{test_type}`
+
+**Test Guidance**: {test_guidance — omit this line when test_type is "none" or null}
+
 **Commit**: `{commit_message}`
 
 ---
@@ -89,6 +95,27 @@ Generate a Markdown analysis report.
 
 ---
 
+## Test Strategy
+
+**Framework**: {test_strategy.test_framework or "Unknown"}
+**Convention**: {test_strategy.detected_convention or "Not detected"}
+
+### Pattern Summary
+
+{test_strategy.patterns_summary}
+
+### Coverage by Step
+
+| Step   | Test Type   | Test File     | Approach                         |
+| ------ | ----------- | ------------- | -------------------------------- |
+| {step} | {test_type} | `{test_file}` | {test_guidance — first sentence} |
+
+{if test_strategy.detected_convention is null}
+> **Warning**: No existing tests found. Confirm test framework before implementing test steps.
+{/if}
+
+---
+
 ## Review History
 
 ### Iteration 1 (if applicable)
@@ -98,7 +125,39 @@ Generate a Markdown analysis report.
 
 ## Writing the File
 
-Write the complete Markdown to `output_path` using the Write tool.
+Write the Markdown **incrementally** — one section at a time — rather than generating the entire file in a single Write
+call. This keeps each write focused and prevents content from being dropped under context pressure.
 
-For updates (review_iteration > 0), edit the existing file in place — add a "Review Iteration N" section at the top of
-the Review History block and update the affected sections.
+### Step 1 — Write the header block
+
+Write the file with the title, metadata lines (`Generated`, `Review Iteration`, `Implementation Steps`,
+`Affected Files`), and the first `---` divider. Use the Write tool.
+
+### Step 2 — Append sections one at a time
+
+Use the Edit tool to append each section in order. After inserting each section, re-read it to confirm content is
+present and correct before continuing.
+
+1. **Ticket Summary** — description, Requirements list, Acceptance Criteria checklist
+2. **Codebase Analysis** — affected files table + Relevant Patterns list
+3. **Risk Assessment** — risk table + Edge Cases list
+4. **Implementation Plan** — one `### Step N` block per step; include `**Test Type**` and `**Test Guidance**` lines on
+   steps where `test_type != "none"`
+5. **Open Questions** — only if `open_questions.length > 0`
+6. **Test Strategy** — framework, convention, coverage table; warning block if no tests found
+7. **Review History** — only if `review_iteration > 0`
+
+### Step 3 — Final verification
+
+After all sections are appended, read the full file and verify:
+- Every acceptance criterion appears in the Ticket Summary
+- Every affected file appears in the Codebase Analysis table
+- Every implementation step has a `### Step N` block in the Implementation Plan
+- Step count in the metadata header matches the actual number of step blocks
+
+If anything is missing, insert it with Edit before returning.
+
+### For updates (review_iteration > 0)
+
+Edit the existing file in place — add a "Review Iteration N" block at the top of the Review History section and
+update only the affected sections. Apply the same per-section verify-after-edit discipline.
