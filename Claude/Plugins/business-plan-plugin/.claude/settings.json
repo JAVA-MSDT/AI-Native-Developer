@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "business_plan_agent": ["business_plan"],
+    "documentation_agent": ["local", "remote"],
+    "jira_ticket_agent": ["jira"]
+  },
+  "hooks": {
+    "after_report_update": ["notify_stakeholders"],
+    "after_document_creation": ["notify_stakeholders"],
+    "after_jira_ticket_creation": ["notify_stakeholders"]
+  }
+}
