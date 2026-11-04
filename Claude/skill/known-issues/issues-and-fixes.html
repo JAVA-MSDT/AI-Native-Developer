@@ -1,0 +1,1006 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <title>Issues &amp; Fixes Log</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style>
+        :root {
+            --bg: #f6f7f9;
+            --panel: #ffffff;
+            --ink: #1c2128;
+            --ink-2: #57606a;
+            --line: #e1e4e8;
+            --accent: #6b46c1;
+            --accent-bg: #f1eafe;
+            --good: #1a7f37;
+            --good-bg: #e9f7ee;
+            --warn: #9a6700;
+            --warn-bg: #fff8e6;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --bg: #0d1117;
+                --panel: #161b22;
+                --ink: #e6edf3;
+                --ink-2: #9198a1;
+                --line: #30363d;
+                --accent: #b794f4;
+                --accent-bg: #241b3a;
+                --good: #3fb950;
+                --good-bg: #0f2a17;
+                --warn: #d29922;
+                --warn-bg: #2b2111;
+            }
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            background: var(--bg);
+            color: var(--ink);
+            font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            line-height: 1.5;
+        }
+
+        .wrap {
+            max-width: 880px;
+            margin: 0 auto;
+            padding: 32px 20px 80px;
+        }
+
+        header.intro {
+            background: var(--panel);
+            border: 1px solid var(--line);
+            border-radius: 12px;
+            padding: 20px 24px;
+            margin-bottom: 24px;
+        }
+
+        header.intro h1 {
+            margin: 0 0 8px;
+            font-size: 20px;
+        }
+
+        header.intro p {
+            margin: 6px 0;
+            color: var(--ink-2);
+            font-size: 14px;
+        }
+
+        header.intro p strong {
+            color: var(--ink);
+        }
+
+        .toolbar {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 16px;
+        }
+
+        #search {
+            flex: 1;
+            padding: 10px 14px;
+            border: 1px solid var(--line);
+            border-radius: 8px;
+            background: var(--panel);
+            color: var(--ink);
+            font-size: 14px;
+        }
+
+        #search:focus {
+            outline: 2px solid var(--accent);
+            outline-offset: 1px;
+        }
+
+        .issue {
+            background: var(--panel);
+            border: 1px solid var(--line);
+            border-radius: 10px;
+            margin-bottom: 10px;
+            overflow: hidden;
+        }
+
+        .issue summary {
+            list-style: none;
+            cursor: pointer;
+            padding: 14px 18px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-weight: 600;
+            font-size: 15px;
+        }
+
+        .issue summary::-webkit-details-marker {
+            display: none;
+        }
+
+        .issue summary::before {
+            content: "▸";
+            color: var(--ink-2);
+            transition: transform 0.15s ease;
+            flex-shrink: 0;
+        }
+
+        .issue[open] summary::before {
+            transform: rotate(90deg);
+        }
+
+        .tag {
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: .03em;
+            text-transform: uppercase;
+            color: var(--accent);
+            background: var(--accent-bg);
+            border-radius: 5px;
+            padding: 3px 7px;
+            flex-shrink: 0;
+        }
+
+        .issue .body {
+            padding: 0 18px 18px 40px;
+        }
+
+        .issue section {
+            margin-bottom: 14px;
+        }
+
+        .issue section:last-child {
+            margin-bottom: 0;
+        }
+
+        .issue h3 {
+            margin: 0 0 6px;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: .04em;
+            color: var(--ink-2);
+        }
+
+        .issue ul {
+            margin: 0;
+            padding-left: 20px;
+        }
+
+        .issue li {
+            margin-bottom: 4px;
+            font-size: 14px;
+        }
+
+        .issue code {
+            background: var(--bg);
+            border: 1px solid var(--line);
+            border-radius: 4px;
+            padding: 1px 5px;
+            font-size: 13px;
+        }
+
+        section.wrong h3 {
+            color: var(--warn);
+        }
+
+        section.fix h3 {
+            color: var(--good);
+        }
+
+        .no-results {
+            color: var(--ink-2);
+            font-size: 14px;
+            padding: 20px;
+            text-align: center;
+            display: none;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="wrap">
+
+        <header class="intro">
+            <h1>Issues &amp; Fixes Log</h1>
+            <p><strong>What this is:</strong> a running log of real problems hit while developing software — the
+                confusing symptom, the actual root cause, and the fix. Not a ticket tracker; no ticket numbers here on
+                purpose.</p>
+            <p><strong>How to use it:</strong> before spending time diagnosing an unfamiliar error (CI, e2e, tooling,
+                git, coverage, etc.), search this page first. If the same or a similar symptom is listed, apply the fix
+                directly instead of re-diagnosing from scratch.</p>
+            <p><strong>Keeping it current:</strong> add a new entry whenever a new non-obvious issue + fix is found.
+                Keep entries short — symptom, cause, fix, permanent prevention. No fluff.</p>
+        </header>
+
+        <div class="toolbar">
+            <input id="search" type="text"
+                placeholder="Search issues (e.g. &quot;coverage&quot;, &quot;e2e&quot;, &quot;rebase&quot;, &quot;TLS&quot;)…" />
+        </div>
+
+        <div id="list">
+
+            <details class="issue"
+                data-text="shedlock duplicatekeyexception schedulershedlock lock table already exists local restart scheduled job skipped debug log">
+                <summary><span class="tag">Tooling</span> ShedLock logs a DuplicateKeyException on a scheduled job's
+                    lock insert — looks like a startup error, isn't one</summary>
+                <div class="body">
+                    <section class="wrong">
+                        <h3>What went wrong</h3>
+                        <ul>
+                            <li>A DEBUG-level <code>org.springframework.dao.DuplicateKeyException</code> appeared right
+                                after startup, on a background scheduler thread, from an
+                                <code>INSERT INTO ...ShedLock...</code> statement — followed by "Initiating transaction
+                                rollback on application exception".</li>
+                            <li>Looked alarming (a stack trace + rollback right at startup), but
+                                <code>ApplicationAvailabilityBean</code> had already logged
+                                <code>ACCEPTING_TRAFFIC</code> beforehand, and the exception is on a scheduling thread,
+                                not <code>main</code>.</li>
+                        </ul>
+                    </section>
+                    <section class="fix">
+                        <h3>How it was fixed</h3>
+                        <ul>
+                            <li>Not a bug — this is ShedLock's own lock-acquisition algorithm
+                                (<code>JdbcTemplateLockProvider</code>) working as designed. It always tries an INSERT
+                                first, optimistically assuming no one holds the named lock yet; if a row for that name
+                                already exists, the INSERT fails with a duplicate-key violation, which ShedLock's
+                                provider catches internally and falls back to a conditional UPDATE (succeeds only if the
+                                existing row's lock-until timestamp has passed).</li>
+                            <li>Confirmed by checking the job's
+                                <code>@SchedulerLock(lockAtMostFor=..., lockAtLeastFor=...)</code> values — restarting
+                                within that window against the same shared lock table (often a table reused across
+                                services/instances) reproduces this every time, and it stops once the previous lock
+                                naturally expires.</li>
+                        </ul>
+                    </section>
+                    <section>
+                        <h3>Permanent fix / how to avoid</h3>
+                        <ul>
+                            <li>No fix needed — this is expected, self-resolving noise, visible only because DEBUG
+                                logging is on. The scheduled job tick is simply skipped that round; nothing crashes or
+                                fails to start.</li>
+                            <li>Before treating a DEBUG-level exception near startup as a real problem, check which
+                                thread it's on and whether readiness/availability logs already flipped to healthy before
+                                it — a background scheduler/lock exception after that point is noise, not a startup
+                                failure.</li>
+                            <li>If this pattern repeats indefinitely (never resolves after the lock's max-hold
+                                duration), that's the real signal something's actually stuck — e.g. a lock row with a
+                                lock-until far in the future from a bad clock or a crashed holder that never released
+                                it.</li>
+                        </ul>
+                    </section>
+                </div>
+            </details>
+
+            <details class="issue"
+                data-text="aws cli unknown output type json sts get-caller-identity uppercase config">
+                <summary><span class="tag">Tooling</span> AWS CLI fails with "Unknown output type: JSON" even though
+                    credentials are valid</summary>
+                <div class="body">
+                    <section class="wrong">
+                        <h3>What went wrong</h3>
+                        <ul>
+                            <li><code>aws sts get-caller-identity</code> (used as a quick credentials sanity check)
+                                failed with <code>aws: [ERROR]: Unknown output type: JSON</code> — exit code 255.</li>
+                            <li>Looked like an auth problem at first, but the SSO session/credentials in
+                                <code>~/.aws/credentials</code> were actually valid and not expired.</li>
+                        </ul>
+                    </section>
+                    <section class="fix">
+                        <h3>How it was fixed</h3>
+                        <ul>
+                            <li>Cause: <code>~/.aws/config</code> had <code>output = JSON</code> (uppercase) under the
+                                <code>[default]</code> profile. The CLI's output-format value is case-sensitive and only
+                                accepts lowercase (<code>json</code>, <code>text</code>, <code>table</code>,
+                                <code>yaml</code>, <code>yaml-stream</code>) — an uppercase value makes every command
+                                using that profile fail before it even gets to auth.</li>
+                            <li>Confirmed by overriding it per-command:
+                                <code>aws sts get-caller-identity --output json</code> succeeded immediately, proving
+                                the credentials were fine all along.</li>
+                        </ul>
+                    </section>
+                    <section>
+                        <h3>Permanent fix / how to avoid</h3>
+                        <ul>
+                            <li>Fix the config value itself: lowercase the <code>output</code> line in
+                                <code>~/.aws/config</code> (e.g. <code>output = json</code>).</li>
+                            <li>Or override per-invocation with <code>--output json</code> or the env var
+                                <code>AWS_DEFAULT_OUTPUT=json</code> (lowercase) without touching the config file.</li>
+                            <li>Don't assume a CLI error mentioning credentials/auth-adjacent wording means the
+                                credentials are actually the problem — test with an explicit <code>--output</code>
+                                override before re-authenticating or requesting new creds.</li>
+                        </ul>
+                    </section>
+                </div>
+            </details>
+
+            <details class="issue" data-text="e2e connection reset ci runner network all tests fail">
+                <summary><span class="tag">E2E</span> E2E job fails 100% of tests with connection-reset errors</summary>
+                <div class="body">
+                    <section class="wrong">
+                        <h3>What went wrong</h3>
+                        <ul>
+                            <li>An e2e job failed <strong>every single test</strong> with
+                                <code>net::ERR_CONNECTION_RESET</code> on the very first page load — across completely
+                                unrelated features/scenarios.</li>
+                            <li>Retrying produced the identical failure, ruling out a flake.</li>
+                        </ul>
+                    </section>
+                    <section class="fix">
+                        <h3>How it was fixed</h3>
+                        <ul>
+                            <li>Fetched the same target URL directly from outside the CI runner — it loaded fine,
+                                proving the app/deployment were healthy.</li>
+                            <li>Concluded it's the CI runner itself that can't reach the target environment — not a code
+                                regression, so nothing to fix in the change under review.</li>
+                            <li>Got real pass/fail proof for the change by running just the changed scenarios locally
+                                against the real environment instead (with proper credentials for that environment).
+                            </li>
+                        </ul>
+                    </section>
+                    <section>
+                        <h3>Permanent fix / how to avoid</h3>
+                        <ul>
+                            <li>This needs whoever owns the CI infrastructure to check the network path (firewall /
+                                security group / DNS) from the CI runner pool to the target environment.</li>
+                            <li>Until fixed: if an e2e job fails 100% of tests on the very first page load, check
+                                reachability from outside the runner before assuming a real regression.</li>
+                        </ul>
+                    </section>
+                </div>
+            </details>
+
+            <details class="issue" data-text="local e2e aws credentials test data discovery sso">
+                <summary><span class="tag">E2E</span> Local e2e run blocked — no AWS credentials for test-data lookup
+                </summary>
+                <div class="body">
+                    <section class="wrong">
+                        <h3>What went wrong</h3>
+                        <ul>
+                            <li>Running a non-mocked e2e scenario locally failed immediately on a setup step that
+                                fetches test data (e.g. a valid test account/id) from a backend service:
+                                <code>Could not load credentials from any providers</code>.</li>
+                            <li>Cause: that lookup needs AWS credentials, and none were configured in the shell.</li>
+                        </ul>
+                    </section>
+                    <section class="fix">
+                        <h3>How it was fixed</h3>
+                        <ul>
+                            <li>Ran <code>aws sso login --profile &lt;profile&gt;</code> to refresh the expired SSO
+                                session.</li>
+                            <li>Exported <code>AWS_PROFILE</code> and <code>AWS_SDK_LOAD_CONFIG=1</code> before running
+                                the tests.</li>
+                        </ul>
+                    </section>
+                    <section class="fix">
+                        <h3>Fix attempt 2</h3>
+                        <ul>
+                            <li>Same symptom, valid (non-expired) SSO credentials already present in the shared
+                                credentials file under a named profile — <code>aws sts get-caller-identity</code> worked
+                                fine from the CLI. The e2e run still failed.</li>
+                            <li>Root cause found in the test-data client's own auth helper: when no
+                                <code>AWS_ACCESS_KEY_ID</code>/<code>AWS_SECRET_ACCESS_KEY</code>/<code>AWS_SESSION_TOKEN</code>
+                                env var is set, it builds its credential provider as
+                                <code>defaultProvider({ profile: process.env.AWS_PROFILE ?? process.env.DEPLOY_ENV })</code>
+                                — with <code>AWS_PROFILE</code> unset, it silently looks for a profile literally named
+                                after the run's target-environment value (e.g. a profile named <code>"dev1"</code>),
+                                which doesn't exist; the real profile is named after the SSO permission set (or is just
+                                <code>default</code>).</li>
+                            <li>Fix: explicitly export <code>AWS_PROFILE</code> to a profile name that actually exists
+                                in <code>~/.aws/credentials</code>/<code>~/.aws/config</code> (<code>default</code>
+                                works if that's the profile with valid credentials) before running the e2e command.
+                                <code>AWS_SDK_LOAD_CONFIG</code> wasn't needed for this — a plain named-profile lookup
+                                from the shared credentials file resolved fine without it.</li>
+                        </ul>
+                    </section>
+                    <section class="fix">
+                        <h3>Fix attempt 3 — no AWS access in the shell at all (e.g. a sandboxed agent environment)</h3>
+                        <ul>
+                            <li>Neither fix above is usable when the shell genuinely has no path to AWS credentials (no
+                                SSO, no static keys, no way to configure a profile).</li>
+                            <li>The helper that does the discovery lookup already supports a pin-and-skip override via
+                                an env var — confirmed working: set that env var to a known-good test-data id before the
+                                run, e.g.
+                                <code>&lt;OVERRIDE_ENV_VAR&gt;=&lt;known-good-id&gt; npm run test:local -- &lt;spec-file-path&gt;</code>.
+                                This bypasses the AWS-backed discovery call entirely — no credentials needed.</li>
+                            <li>Scope the run to the one spec file by path when using this, rather than
+                                <code>--grep</code> — a quoted <code>--grep</code> pattern passed through several layers
+                                of <code>cross-env</code>/npm-script/<code>spawnSync</code> did not reliably scope the
+                                run down (it silently ran the full suite instead in one observed case); the generated
+                                spec file's own path did.</li>
+                        </ul>
+                    </section>
+                    <section>
+                        <h3>Permanent fix / how to avoid</h3>
+                        <ul>
+                            <li>Before running any e2e scenario that isn't fully mocked, make sure the relevant AWS SSO
+                                profile is logged in — sessions expire and silently fail with a generic credentials
+                                error.</li>
+                            <li>Don't assume an unset <code>AWS_PROFILE</code> falls back to <code>default</code> — some
+                                custom AWS SDK wrapper clients fall back to another env var (like the run's
+                                target-environment/lifecycle name) instead, which silently resolves to a profile that
+                                doesn't exist. Always set <code>AWS_PROFILE</code> explicitly to a profile name you've
+                                confirmed exists, and verify resolution with a throwaway script that prints only
+                                success/failure and a masked key prefix — never print full credential values.</li>
+                            <li>If there's no AWS access at all in the shell, check whether the helper already supports
+                                pinning a known test-data id via an env var to skip the discovery lookup entirely —
+                                confirmed to work as a full substitute for AWS credentials, not just a fallback.</li>
+                        </ul>
+                    </section>
+                </div>
+            </details>
+
+            <details class="issue"
+                data-text="playwright bdd page object query parser element name digit doesn't meet the requirements ordinal">
+                <summary><span class="tag">E2E</span> Page-object element name with a digit throws "doesn't meet the
+                    requirements" at query time</summary>
+                <div class="body">
+                    <section class="wrong">
+                        <h3>What went wrong</h3>
+                        <ul>
+                            <li>Named two page-object children after numbered items on the page (e.g.
+                                <code>'Footnote 1'</code>, <code>'Footnote 2'</code>) to target each one directly.</li>
+                            <li>Every step referencing them failed at query time:
+                                <code>Error: The passed query item doesn't meet the requirements. Current queryItem: 'Footnote 1'.</code>
+                            </li>
+                            <li>Cause: the framework's element-name parser only allows letters/spaces/underscores in the
+                                name itself. A digit is only accepted as an <em>ordinal prefix</em> before the name
+                                (e.g. <code>1st Item</code>), never inside the name — so any child key containing a bare
+                                number is rejected outright, not just when queried with an index.</li>
+                        </ul>
+                    </section>
+                    <section class="fix">
+                        <h3>How it was fixed</h3>
+                        <ul>
+                            <li>Replaced the two digit-suffixed keys with one collection selector matching every
+                                instance of that repeating element (e.g. all footnote paragraphs under their shared
+                                container).</li>
+                            <li>Referenced them in Gherkin via the framework's own ordinal-prefix convention instead —
+                                <code>'1st Footnote'</code> / <code>'2nd Footnote'</code> — which the parser does
+                                accept.</li>
+                        </ul>
+                    </section>
+                    <section>
+                        <h3>Permanent fix / how to avoid</h3>
+                        <ul>
+                            <li>Never put a digit inside a page-object child key, even one that looks purely descriptive
+                                (<code>'Footnote 1'</code>, <code>'Step 2'</code>) — it will fail this parser's naming
+                                rule regardless of whether the element actually repeats on the page.</li>
+                            <li>If there's genuinely only one such element (not a real collection), give it a
+                                spelled-out or ordinal-free name instead (e.g. <code>'First Footnote'</code>, or just
+                                <code>'Footnote'</code> if there's only one) rather than reaching for a digit.</li>
+                            <li>If it does repeat, model it as an <code>isCollection: true</code> selector up front and
+                                rely on the framework's own <code>1st</code>/<code>2nd</code>/<code>3rd</code> query
+                                syntax — don't hand-roll numbered keys.</li>
+                        </ul>
+                    </section>
+                </div>
+            </details>
+
+            <details class="issue" data-text="npm grep playwright no tests found nested scripts arguments swallowed">
+                <summary><span class="tag">Tooling</span> npm swallows <code>--grep</code> passed through nested
+                    <code>npm run</code> scripts</summary>
+                <div class="body">
+                    <section class="wrong">
+                        <h3>What went wrong</h3>
+                        <ul>
+                            <li><code>npm run test:&lt;env&gt;:chromium -- --grep "Foo"</code> failed with "No tests
+                                found".</li>
+                            <li>The wrapper script chains multiple <code>npm run</code> calls; at the inner call, npm
+                                re-parsed <code>--grep</code> as its own flag instead of forwarding it, so "Foo" reached
+                                Playwright as a garbage file-path pattern.</li>
+                        </ul>
+                    </section>
+                    <section class="fix">
+                        <h3>How it was fixed</h3>
+                        <ul>
+                            <li>Bypassed the npm wrapper scripts — set the same env vars they set (target environment,
+                                base URL, API endpoints, etc.) manually.</li>
+                            <li>Ran any code-generation step the suite needs (e.g. BDD spec generation), then called
+                                <code>npx playwright test --grep "..."</code> directly.</li>
+                        </ul>
+                    </section>
+                    <section>
+                        <h3>Permanent fix / how to avoid</h3>
+                        <ul>
+                            <li>Whenever a scoped/filtered e2e run is needed (<code>--grep</code>, a specific spec
+                                path), call <code>npx playwright test</code> directly with the required env vars instead
+                                of going through the chained <code>npm run test:&lt;env&gt;:&lt;browser&gt;</code>
+                                scripts.</li>
+                        </ul>
+                    </section>
+                </div>
+            </details>
+
+            <details class="issue"
+                data-text="downloadable file link new tab download chromium window location target blank playwright pdf">
+                <summary><span class="tag">E2E</span> Link-to-a-downloadable-file scenario asserted the wrong thing
+                </summary>
+                <div class="body">
+                    <section class="wrong">
+                        <h3>What went wrong</h3>
+                        <ul>
+                            <li>A scenario asserted that a new tab's <em>URL</em> contains the file's path after
+                                clicking a <code>target="_blank"</code> link to a downloadable file (e.g. a PDF). It
+                                timed out.</li>
+                            <li>Chromium treats navigating to this kind of file as a <strong>download</strong>, not an
+                                in-tab view — the popup's <code>window.location</code>/title never change.</li>
+                        </ul>
+                    </section>
+                    <section class="fix">
+                        <h3>How it was fixed</h3>
+                        <ul>
+                            <li>Confirmed the behavior with a small standalone Playwright script before touching the
+                                real test — it showed a <code>download</code> event firing with the real URL/filename,
+                                while the popup page itself stayed blank.</li>
+                            <li>Rewrote the assertion to listen for the <code>download</code> event and check its
+                                <code>url()</code> / <code>suggestedFilename()</code> instead of the popup's own URL.
+                            </li>
+                        </ul>
+                    </section>
+                    <section>
+                        <h3>Permanent fix / how to avoid</h3>
+                        <ul>
+                            <li>For any scenario where a link opens a downloadable asset in a new tab, assert on the
+                                <code>download</code> event — never on the new tab's <code>page.url()</code>.</li>
+                            <li>If unsure whether a resource downloads vs. renders inline, verify with a 10-line
+                                throwaway script before writing the real assertion.</li>
+                        </ul>
+                    </section>
+                </div>
+            </details>
+
+            <details class="issue" data-text="pre-push coverage gate stale report git push blocked">
+                <summary><span class="tag">Git</span> Pre-push blocked — stale coverage report</summary>
+                <div class="body">
+                    <section class="wrong">
+                        <h3>What went wrong</h3>
+                        <ul>
+                            <li><code>git push</code> repeatedly blocked with: "stale coverage report — source changed
+                                after it was generated".</li>
+                        </ul>
+                    </section>
+                    <section class="fix">
+                        <h3>How it was fixed</h3>
+                        <ul>
+                            <li>Ran <code>npm run test</code> (regenerates <code>coverage/</code>) immediately before
+                                pushing.</li>
+                        </ul>
+                    </section>
+                    <section class="fix">
+                        <h3>Fix attempt 2 — the generic "test" script never terminated</h3>
+                        <ul>
+                            <li>Symptom looked identical (push still blocked, coverage command "just kept running" for
+                                many minutes), but the real cause this time: the repo's <code>package.json</code>
+                                aliased the plain <code>test</code> script to interactive watch mode with a real,
+                                non-headless browser (<code>--watch=true</code>, no headless flag) — it never exits on
+                                its own, so it can never actually regenerate a fresh one-shot report.</li>
+                            <li>A separate script (e.g. <code>test:coverage</code>) was the one the pre-push/pre-commit
+                                hooks and CI actually run — headless, single-pass, exits with a code.</li>
+                            <li>Before assuming a coverage regen command is just slow, check the actual script body in
+                                <code>package.json</code>/<code>build.gradle</code> for a
+                                <code>--watch</code>/non-headless flag, and check for a differently-named one-shot
+                                script the hooks/CI actually invoke — don't assume the generic script name is the right
+                                one.</li>
+                            <li>Killing a stuck watch-mode run can leave its whole process tree (npm → framework CLI →
+                                browser + all its child processes) orphaned rather than exiting, especially if the run
+                                was stopped by killing a wrapper/background-task handle rather than the process itself —
+                                check for an unexpectedly large number of the relevant node/browser processes before
+                                writing the slowness off as normal machine load.</li>
+                        </ul>
+                    </section>
+                    <section>
+                        <h3>Permanent fix / how to avoid</h3>
+                        <ul>
+                            <li>Always regenerate coverage as the last step before pushing, any time source changed
+                                since coverage was last generated — a hook that compares file modification times rather
+                                than content hashes can be triggered even by a rebase alone.</li>
+                            <li>Use the exact script name the pre-push/pre-commit hook or CI config invokes, not
+                                whatever seems like the obvious generic name — confirm by reading the hook/CI config or
+                                the package script body once per repo.</li>
+                        </ul>
+                    </section>
+                </div>
+            </details>
+
+            <details class="issue"
+                data-text="fast forward merge not possible rebase target branch moved diverged approvals force push pull request merge request">
+                <summary><span class="tag">Git</span> PR/MR blocked — "Fast-forward merge is not possible"</summary>
+                <div class="body">
+                    <section class="wrong">
+                        <h3>What went wrong</h3>
+                        <ul>
+                            <li>The target branch (e.g. <code>main</code>/<code>develop</code>) advanced while the PR/MR
+                                was in review, so the fast-forward-only merge method rejected the merge. Can happen more
+                                than once in the same review cycle.</li>
+                        </ul>
+                    </section>
+                    <section class="fix">
+                        <h3>How it was fixed</h3>
+                        <ul>
+                            <li><code>git fetch</code> → <code>git rebase origin/&lt;target-branch&gt;</code> →
+                                regenerate coverage → <code>git push --force-with-lease</code>.</li>
+                            <li>Checked via the git host's approvals API/UI that this project does <strong>not</strong>
+                                reset existing approvals on a force-push (this is a per-project setting — verify it
+                                rather than assuming).</li>
+                        </ul>
+                    </section>
+                    <section>
+                        <h3>Permanent fix / how to avoid</h3>
+                        <ul>
+                            <li>When a project's merge method is fast-forward-only by design, expect to rebase (never
+                                merge-commit) whenever the target branch moves before your PR/MR merges.</li>
+                            <li>Force-pushing your own feature branch afterward is normal here, not a bypass.</li>
+                        </ul>
+                    </section>
+                </div>
+            </details>
+
+            <details class="issue"
+                data-text="mcp server reconnect fail -32000 self signed certificate tls inspection proxy node extra ca certs">
+                <summary><span class="tag">MCP</span> A Node-based MCP server fails to reconnect (-32000) behind a
+                    TLS-inspecting proxy</summary>
+                <div class="body">
+                    <section class="wrong">
+                        <h3>What went wrong</h3>
+                        <ul>
+                            <li>A remote MCP server failed to reconnect with a generic <code>-32000</code> JSON-RPC
+                                error — looked like a bad/expired auth token at first glance.</li>
+                        </ul>
+                    </section>
+                    <section class="fix">
+                        <h3>How it was fixed</h3>
+                        <ul>
+                            <li>Ran the underlying <code>npx mcp-remote</code> command by hand to see the real error:
+                                <code>SELF_SIGNED_CERT_IN_CHAIN</code> — a TLS trust problem, not an auth problem.</li>
+                            <li>Traced it to <code>NODE_EXTRA_CA_CERTS</code> pointing at a CA bundle that didn't
+                                include the root certificate of a TLS-inspecting proxy. A newer bundle that did include
+                                it already existed on disk but wasn't wired up.</li>
+                            <li>Repointed <code>NODE_EXTRA_CA_CERTS</code> at the newer combined bundle and restarted
+                                the app.</li>
+                        </ul>
+                    </section>
+                    <section>
+                        <h3>Permanent fix / how to avoid</h3>
+                        <ul>
+                            <li>If any Node-based MCP server/CLI fails to connect to an internal HTTPS host with a vague
+                                error, run its underlying command directly first — don't assume it's the token.</li>
+                            <li><code>SELF_SIGNED_CERT_IN_CHAIN</code> → check <code>NODE_EXTRA_CA_CERTS</code> includes
+                                the current proxy root cert bundle, then <strong>restart the app</strong> — Windows does
+                                not propagate env var changes to already-running processes.</li>
+                        </ul>
+                    </section>
+                </div>
+            </details>
+
+            <details class="issue"
+                data-text="cli cannot find module ts-node module_not_found node_modules missing plugin cache cli tool">
+                <summary><span class="tag">Tooling</span> A bundled Node CLI fails with "Cannot find module" for a
+                    devDependency</summary>
+                <div class="body">
+                    <section class="wrong">
+                        <h3>What went wrong</h3>
+                        <ul>
+                            <li>Running a Node-based CLI shipped inside a tool's cache directory threw
+                                <code>Error: Cannot find module 'ts-node'</code> (<code>MODULE_NOT_FOUND</code>) from
+                                its bin script.</li>
+                            <li>The package's <code>package.json</code>/<code>package-lock.json</code> existed and
+                                listed the dependency, but no <code>node_modules</code> folder was present at all —
+                                dependencies had simply never been installed for that cached version.</li>
+                        </ul>
+                    </section>
+                    <section class="fix">
+                        <h3>How it was fixed</h3>
+                        <ul>
+                            <li>Ran <code>npm install --no-audit --no-fund</code> directly inside the CLI's
+                                <code>scripts</code> folder (the directory containing its own <code>package.json</code>)
+                                — this installed the missing packages in seconds and the CLI worked immediately after.
+                            </li>
+                        </ul>
+                    </section>
+                    <section>
+                        <h3>Permanent fix / how to avoid</h3>
+                        <ul>
+                            <li>When a bundled CLI errors with <code>MODULE_NOT_FOUND</code> for one of its own listed
+                                dependencies, check whether <code>node_modules</code> exists next to that package's
+                                <code>package.json</code> before assuming a version/config bug — an
+                                <code>npm install</code> there is usually the whole fix.</li>
+                        </ul>
+                    </section>
+                </div>
+            </details>
+
+            <details class="issue"
+                data-text="workspace open reuses stale tmp directory same key different name wrong branch checked out cli">
+                <summary><span class="tag">Tooling</span> A CLI workspace command silently reuses a stale directory from
+                    an unrelated prior run</summary>
+                <div class="body">
+                    <section class="wrong">
+                        <h3>What went wrong</h3>
+                        <ul>
+                            <li>A CLI command that opens a working directory keyed only by an id (e.g.
+                                <code>/tmp/&lt;prefix&gt;-&lt;id&gt;</code>), with a second argument (like a component
+                                name) that should scope a distinct branch, ignored that second argument when the
+                                directory already existed from an earlier, unrelated invocation for the same key.</li>
+                            <li>The command's own JSON output reported the intended new branch name, but the actual
+                                checked-out git branch remained whatever a prior run had left checked out — a different,
+                                unrelated branch.</li>
+                            <li>Committing and pushing on trust of the reported branch name pushed unrelated new work
+                                onto that stale pre-existing branch instead of a fresh one, and the stale directory also
+                                had unrelated uncommitted edits sitting in its working tree from the earlier run.</li>
+                        </ul>
+                    </section>
+                    <section class="fix">
+                        <h3>How it was fixed</h3>
+                        <ul>
+                            <li>After running the workspace-opening command, verified the actual checked-out branch with
+                                <code>git -C &lt;dir&gt; branch -vv</code>/<code>git status</code> rather than trusting
+                                the command's reported JSON — caught the mismatch before pushing anything further.</li>
+                            <li>Left the stale directory and its uncommitted edits untouched (they may be another task's
+                                in-progress work), and instead hand-built a clean workspace: a fresh directory, a sparse
+                                <code>git clone</code>/<code>checkout</code> of the same repo at the target ref,
+                                <code>git checkout -B &lt;correct-branch&gt; origin/&lt;ref&gt;</code>, reapplied the
+                                drafted file changes there, then validated/committed/pushed from that clean directory.
+                            </li>
+                            <li>Did not force-push over the stale branch to "fix" it in place — it had no open PR/MR and
+                                no destructive action was needed to make forward progress; flagged it for the user
+                                instead.</li>
+                        </ul>
+                    </section>
+                    <section>
+                        <h3>Permanent fix / how to avoid</h3>
+                        <ul>
+                            <li>Never trust a workspace-opening command's reported branch/path blindly when the same key
+                                may have been used in a prior run — always confirm with <code>git branch -vv</code> and
+                                <code>git status</code> in that directory before drafting or, especially, before
+                                committing/pushing.</li>
+                            <li>If the directory turns out stale (wrong branch, or unexpected uncommitted changes not
+                                from this session), don't reuse or reset it — build a clean one by hand from the same
+                                remote/ref and proceed there.</li>
+                        </ul>
+                    </section>
+                </div>
+            </details>
+
+            <details class="issue"
+                data-text="coverage dropped after deleting page feature dead code unused shared helper functions">
+                <summary><span class="tag">Coverage</span> Coverage % dropped after deleting a page/feature</summary>
+                <div class="body">
+                    <section class="wrong">
+                        <h3>What went wrong</h3>
+                        <ul>
+                            <li>The pipeline's coverage widget showed a decrease after removing an old page/feature,
+                                even though nothing in the diff itself was undertested.</li>
+                        </ul>
+                    </section>
+                    <section class="fix">
+                        <h3>How it was fixed</h3>
+                        <ul>
+                            <li>Compared per-file coverage before/after: a handful of shared helper functions had become
+                                fully dead code (zero real usages) once the deleted feature's content/config was removed
+                                — nothing else in the app called them.</li>
+                            <li>Deleted the dead functions, their types, and the tests written only for them. Coverage
+                                returned to baseline.</li>
+                        </ul>
+                    </section>
+                    <section>
+                        <h3>Permanent fix / how to avoid</h3>
+                        <ul>
+                            <li>When coverage drops after deleting a page/feature, check for shared code left with no
+                                remaining real callers (grep for actual usages, not just "does a test exist").</li>
+                            <li>Deleting the dead code is the right fix — not adding more tests to prop up a number.
+                            </li>
+                        </ul>
+                    </section>
+                </div>
+            </details>
+
+            <details class="issue"
+                data-text="gradle 9 sonarqube plugin nosuchmethoderror dslobject getconvention dry-run false negative build tool plugin incompatible major version">
+                <summary><span class="tag">Tooling</span> A build-tool Gradle plugin passed <code>--dry-run</code>
+                    validation but crashed for real in CI</summary>
+                <div class="body">
+                    <section class="wrong">
+                        <h3>What went wrong</h3>
+                        <ul>
+                            <li>CI failed running a Gradle analysis task (e.g. <code>sonarqube</code>) after a Gradle
+                                major-version bump, with a <code>NoSuchMethodError</code> for a Gradle internal API the
+                                plugin still called (here: <code>DslObject.getConvention()</code>, removed in Gradle 9).
+                            </li>
+                            <li>The same plugin version had earlier been validated via
+                                <code>./gradlew &lt;task&gt; --dry-run</code> and reported as "configures cleanly" —
+                                that result turned out to be wrong.</li>
+                        </ul>
+                    </section>
+                    <section class="fix">
+                        <h3>How it was fixed</h3>
+                        <ul>
+                            <li>Reproduced locally by dropping <code>--dry-run</code> and running the task for real —
+                                same crash, same stack trace.</li>
+                            <li>Bumped the plugin to a version built against the new Gradle major line; re-ran for real
+                                — the internal-API crash was gone (the task then only failed on missing local
+                                credentials/config, unrelated).</li>
+                        </ul>
+                    </section>
+                    <section>
+                        <h3>Permanent fix / how to avoid</h3>
+                        <ul>
+                            <li><code>--dry-run</code> only configures/realizes the task graph — it never executes a
+                                task's action. A plugin crash that only happens deep inside the task's real execution
+                                (not during plugin application/configuration) will not be caught by dry-run at all.</li>
+                            <li>When validating a build-tool plugin against a new Gradle major version, run the task for
+                                real at least once (even without full external connectivity/credentials) — a crash
+                                inside the plugin's own code shows up before any network call, so this doesn't require a
+                                live server to catch.</li>
+                            <li>Don't generalize "plugin X survived dry-run" to "plugin Y will too" — each plugin's own
+                                internal-API usage decides whether the crash surfaces at configuration time (dry-run
+                                catches it) or execution time (dry-run misses it).</li>
+                        </ul>
+                    </section>
+                </div>
+            </details>
+
+            <details class="issue"
+                data-text="e2e node_modules corrupted type declarations tsc TS2306 TS2307 is not a module cannot find module husky pre-push npm ci">
+                <summary><span class="tag">E2E</span> Corrupted e2e node_modules type declarations fail the pre-push tsc
+                    build</summary>
+                <section class="wrong">
+                    <h3>What went wrong</h3>
+                    <ul>
+                        <li>A `git push` was blocked by the husky pre-push hook: the e2e package's `tsc` build failed
+                            with `TS2306 File '.../node_modules/@some-scope/some-lib/core/index.d.ts' is not a module`
+                            and `TS2307 Cannot find module '@some-scope/some-lib/core/.../types'`, across several
+                            unrelated source files.</li>
+                        <li>The branch being pushed had no diff at all under `e2e/` — the failure was unrelated to the
+                            actual code change.</li>
+                    </ul>
+                </section>
+                <section class="fix">
+                    <h3>How it was fixed</h3>
+                    <ul>
+                        <li>Inspected the installed package's own `.d.ts` file directly — it only declared one unrelated
+                            internal module, missing all the real exports (logger, reporters, context, interceptors,
+                            etc.), confirming a stale/incomplete local install rather than a real type error.</li>
+                        <li>Ran `npm ci` inside the e2e package directory to force a clean reinstall from the lockfile.
+                        </li>
+                        <li>Re-ran the build — the `.d.ts` file now had the correct `export * from './logger'` etc.
+                            lines, and the push's build/lint pre-push step passed.</li>
+                    </ul>
+                </section>
+                <section>
+                    <h3>Permanent fix / how to avoid</h3>
+                    <ul>
+                        <li>If a pre-push (or CI) TypeScript failure references a package under `node_modules` with a
+                            nonsensical "is not a module" or "cannot find module" error, and the current branch has no
+                            diff touching that package or directory, suspect a corrupted/incomplete local install before
+                            assuming a real code regression.</li>
+                        <li>`npm ci` in the affected package directory is the fast, safe fix — it wipes and reinstalls
+                            exactly per the lockfile, so it can't silently upgrade/change dependency versions the way
+                            `npm install` might.</li>
+                    </ul>
+                </section>
+            </details>
+
+            <details class="issue"
+                data-text="is not iterable spread undefined optional array typescript external api response third party">
+                <summary><span class="tag">E2E</span> A live third-party API response crashed a test with "is not
+                    iterable"</summary>
+                <div class="body">
+                    <section class="wrong">
+                        <h3>What went wrong</h3>
+                        <ul>
+                            <li>An e2e assertion that spread two array fields from a third-party API's JSON response
+                                (e.g. <code>[...response.data.someList, ...response.data.otherList]</code>) crashed with
+                                <code>TypeError: response.data.otherList is not iterable</code> — on a real, successful
+                                (200) response.</li>
+                            <li>The TypeScript interface for that response declared both fields as plain, always-present
+                                arrays, so nothing on the type-checking side hinted this could happen.</li>
+                        </ul>
+                    </section>
+                    <section class="fix">
+                        <h3>How it was fixed</h3>
+                        <ul>
+                            <li>Checked the backend service's own model for that same third-party payload — the field
+                                was an unannotated, nullable <code>List</code> with no non-null guarantee, confirming
+                                the third party genuinely omits the key (rather than sending an empty array) when
+                                there's nothing of that kind for the given request.</li>
+                            <li>Made the field optional in the TypeScript interface (<code>otherList?: Item[]</code>)
+                                and defaulted with <code>?? []</code> at every read site.</li>
+                        </ul>
+                    </section>
+                    <section>
+                        <h3>Permanent fix / how to avoid</h3>
+                        <ul>
+                            <li>Don't declare a field from a third-party/external API response as always-present just
+                                because it usually is — check whether the backend's own model for that same payload
+                                treats it as nullable/optional, and mirror that in the client-side type instead of
+                                assuming a fixed shape.</li>
+                            <li>If a strict linter (e.g. <code>@typescript-eslint/no-unnecessary-condition</code>) flags
+                                a defensive <code>?? []</code>/<code>?.</code> as "unnecessary", that's a signal the
+                                *type* is overconfident, not that the defensive code is wrong — fix the type to be
+                                optional/nullable rather than removing the guard or suppressing the lint rule.</li>
+                        </ul>
+                    </section>
+                </div>
+            </details>
+
+            <details class="issue"
+                data-text="email failed verification validation_error 400 sign up registration form company domain internal email rejected plus addressing test email disposable allow-list rejected by defined rules email not received non-prod">
+                <summary><span class="tag">Testing</span> Submitting a test sign-up with a company email fails "email
+                    failed verification"</summary>
+                <div class="body">
+                    <section class="wrong">
+                        <h3>What went wrong</h3>
+                        <ul>
+                            <li>A manual end-to-end test submitted a sign-up form using the tester's own company email
+                                (plus-addressed) and got <code>400 VALIDATION_ERROR</code>
+                                <code>"email failed verification"</code>.</li>
+                            <li>The email-verification step rejects the company's own domains on purpose (a configured
+                                internal-domain list returns "invalid" without calling the verification provider), so
+                                employee addresses can never be used as an end-user email.</li>
+                            <li>The test guide had assumed "internal domains skip the external check" meant they pass;
+                                they skip it and fail.</li>
+                        </ul>
+                    </section>
+                    <section class="fix">
+                        <h3>How it was fixed</h3>
+                        <ul>
+                            <li>Submitted with an address outside the internal-domain list; the submit then passed.</li>
+                            <li>That alone does not get the email delivered in non-prod: the email-sending service has
+                                its own recipient allow-list/block-list and rejected every non-internal address tried
+                                (with or without <code>+</code> addressing, and a public webmail domain). Its record
+                                shows <code>REJECTED</code> / "Email sending rejected by defined rules" after the
+                                hand-off succeeded.</li>
+                        </ul>
+                    </section>
+                    <section>
+                        <h3>Permanent fix / how to avoid</h3>
+                        <ul>
+                            <li>Before writing test data, read the service's email-verification code/config for an
+                                internal-domain list and what it returns for a match.</li>
+                            <li>Disposable/throwaway inbox domains also fail when the provider flags disposable or
+                                undeliverable addresses; use a real external mailbox.</li>
+                            <li>A direct call to the notification/email-sending service usually skips this form-side
+                                check, so a company address works there.</li>
+                            <li>When a test email is accepted but never arrives in non-prod, check the sending service's
+                                own request record and logs for a rules rejection before suspecting your own code.</li>
+                            <li>The deployed allow-list/block-list is environment config, not the repo's local config.
+                                Don't infer the allowed domains from a local config file; ask the owning team for the
+                                deployed values, or to add the test address.</li>
+                            <li>If the only domains the sender allows are the ones the form-side check blocks, no test
+                                address passes both; the sender's team has to allow-list one.</li>
+                        </ul>
+                    </section>
+                </div>
+            </details>
+
+        </div>
+
+        <p class="no-results" id="noResults">No matching issues.</p>
+
+    </div>
+
+    <script>
+        const search = document.getElementById('search');
+        const items = Array.from(document.querySelectorAll('.issue'));
+        const noResults = document.getElementById('noResults');
+
+        search.addEventListener('input', () => {
+            const q = search.value.trim().toLowerCase();
+            let visible = 0;
+            items.forEach(item => {
+                const haystack = (item.dataset.text + ' ' + item.querySelector('summary').textContent).toLowerCase();
+                const match = q === '' || haystack.includes(q);
+                item.style.display = match ? '' : 'none';
+                if (match) visible++;
+            });
+            noResults.style.display = visible === 0 ? 'block' : 'none';
+        });
+    </script>
+
+</body>
+
+</html>
