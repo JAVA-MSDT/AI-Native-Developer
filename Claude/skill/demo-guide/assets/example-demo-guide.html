@@ -1,0 +1,808 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <title>Task Tracker Sprint Demo — Mar 2–9, 2026</title>
+    <style>
+        :root {
+            --bg: #f4f6f9;
+            --card: #ffffff;
+            --ink: #1b2430;
+            --sub: #5b6675;
+            --line: #e2e6ec;
+            --blue: #2457c5;
+            --blue-ink: #173d94;
+            --blue-bg: #eaf0fd;
+            --green: #1c8a5a;
+            --green-bg: #e8f7ef;
+            --amber: #a5680a;
+            --amber-bg: #fdf3e2;
+            --purple: #7a3fc4;
+            --purple-bg: #f2eafb;
+            --gray-bg: #eef0f3;
+            --code: #eef1f5;
+            --radius: 12px;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            background: var(--bg);
+            color: var(--ink);
+            font-family: -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+            line-height: 1.5;
+            font-size: 15px;
+        }
+
+        a {
+            color: var(--blue);
+            text-decoration: none;
+        }
+
+        a:hover {
+            text-decoration: underline;
+        }
+
+        .wrap {
+            max-width: 980px;
+            margin: 0 auto;
+            padding: 0 24px 80px;
+        }
+
+        header.hero {
+            background: linear-gradient(135deg, #173d94, #2457c5 60%, #3f79e6);
+            color: #fff;
+            padding: 38px 24px 30px;
+        }
+
+        header.hero .wrap {
+            padding: 0;
+        }
+
+        .eyebrow {
+            font-size: 12.5px;
+            letter-spacing: .08em;
+            text-transform: uppercase;
+            opacity: .85;
+            font-weight: 600;
+        }
+
+        h1 {
+            font-size: 28px;
+            margin: 8px 0 6px;
+            font-weight: 750;
+        }
+
+        .hero-sub {
+            font-size: 15px;
+            opacity: .92;
+            margin: 0 0 18px;
+        }
+
+        .hero-meta {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            font-size: 13.5px;
+        }
+
+        .hero-meta span {
+            background: rgba(255, 255, 255, .14);
+            border: 1px solid rgba(255, 255, 255, .28);
+            border-radius: 999px;
+            padding: 5px 12px;
+        }
+
+        .live-btn {
+            display: inline-block;
+            margin-top: 16px;
+            background: #fff;
+            color: var(--blue-ink);
+            font-weight: 700;
+            padding: 10px 18px;
+            border-radius: 9px;
+            font-size: 14px;
+        }
+
+        .live-btn:hover {
+            text-decoration: none;
+            background: #eef3ff;
+        }
+
+        nav.toc {
+            background: var(--card);
+            border-bottom: 1px solid var(--line);
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            box-shadow: 0 1px 0 rgba(0, 0, 0, .03);
+        }
+
+        nav.toc .wrap {
+            display: flex;
+            gap: 18px;
+            flex-wrap: wrap;
+            padding: 12px 24px;
+            font-size: 13.5px;
+            font-weight: 600;
+        }
+
+        nav.toc a {
+            color: var(--sub);
+        }
+
+        nav.toc a:hover {
+            color: var(--blue);
+        }
+
+        section {
+            padding: 36px 0 6px;
+        }
+
+        h2 {
+            font-size: 20px;
+            margin: 0 0 4px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .section-sub {
+            color: var(--sub);
+            font-size: 13.5px;
+            margin: 0 0 20px;
+        }
+
+        .step-num {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 26px;
+            height: 26px;
+            border-radius: 50%;
+            background: var(--blue);
+            color: #fff;
+            font-size: 13px;
+            font-weight: 700;
+            flex-shrink: 0;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 12px;
+            margin-top: 24px;
+        }
+
+        .stat {
+            background: var(--card);
+            border: 1px solid var(--line);
+            border-radius: var(--radius);
+            padding: 16px;
+            text-align: center;
+        }
+
+        .stat .num {
+            font-size: 24px;
+            font-weight: 800;
+            color: var(--blue-ink);
+        }
+
+        .stat .label {
+            font-size: 12px;
+            color: var(--sub);
+            text-transform: uppercase;
+            letter-spacing: .04em;
+            margin-top: 2px;
+        }
+
+        .step {
+            background: var(--card);
+            border: 1px solid var(--line);
+            border-radius: var(--radius);
+            padding: 18px 20px;
+            margin-bottom: 14px;
+            display: flex;
+            gap: 14px;
+        }
+
+        .step-body {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .step-title {
+            font-weight: 700;
+            font-size: 15.5px;
+            margin: 0 0 4px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .url {
+            font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+            font-size: 12.5px;
+            background: var(--code);
+            border-radius: 6px;
+            padding: 3px 8px;
+            display: inline-block;
+            margin: 4px 0 8px;
+            word-break: break-all;
+            color: #334;
+        }
+
+        .badge {
+            font-size: 11px;
+            font-weight: 700;
+            padding: 2px 8px;
+            border-radius: 999px;
+            letter-spacing: .01em;
+        }
+
+        .b-be {
+            background: var(--purple-bg);
+            color: var(--purple);
+        }
+
+        .tix {
+            font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+            font-size: 11px;
+            font-weight: 700;
+            padding: 2px 8px;
+            border-radius: 6px;
+            background: #fff;
+            color: var(--blue-ink);
+            border: 1px solid #cddbfa;
+        }
+
+        .tix.muted {
+            color: var(--sub);
+            border-color: var(--line);
+            background: var(--gray-bg);
+            font-family: inherit;
+            font-weight: 600;
+        }
+
+        .b-fe {
+            background: var(--blue-bg);
+            color: var(--blue-ink);
+        }
+
+        .b-both {
+            background: var(--green-bg);
+            color: var(--green);
+        }
+
+        .talk {
+            margin: 6px 0 0;
+            padding-left: 18px;
+        }
+
+        .talk li {
+            margin-bottom: 4px;
+            font-size: 14px;
+        }
+
+        .callout {
+            margin-top: 10px;
+            padding: 8px 12px;
+            border-radius: 8px;
+            font-size: 13px;
+            background: var(--amber-bg);
+            color: var(--amber);
+            border: 1px solid #f3e0b8;
+        }
+
+        .callout.note {
+            background: var(--gray-bg);
+            color: var(--sub);
+            border-color: var(--line);
+        }
+
+        .grid2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 14px;
+        }
+
+        @media (max-width:720px) {
+            .grid2 {
+                grid-template-columns: 1fr;
+            }
+
+            .stats {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        .card {
+            background: var(--card);
+            border: 1px solid var(--line);
+            border-radius: var(--radius);
+            padding: 16px 18px;
+            margin-bottom: 12px;
+        }
+
+        .card h3 {
+            margin: 0 0 6px;
+            font-size: 14.5px;
+        }
+
+        .card .tag {
+            font-size: 11px;
+            font-weight: 700;
+            color: var(--sub);
+            text-transform: uppercase;
+            letter-spacing: .04em;
+        }
+
+        .card p {
+            margin: 6px 0 0;
+            font-size: 13.5px;
+            color: #333;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+            margin-top: 10px;
+        }
+
+        th,
+        td {
+            border-bottom: 1px solid var(--line);
+            padding: 8px 10px;
+            text-align: left;
+            vertical-align: top;
+        }
+
+        th {
+            background: var(--gray-bg);
+            font-size: 11.5px;
+            text-transform: uppercase;
+            letter-spacing: .03em;
+            color: var(--sub);
+        }
+
+        td.mono {
+            font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+            font-size: 12px;
+            white-space: nowrap;
+        }
+
+        details {
+            background: var(--card);
+            border: 1px solid var(--line);
+            border-radius: var(--radius);
+            padding: 12px 18px;
+            margin-bottom: 12px;
+        }
+
+        summary {
+            cursor: pointer;
+            font-weight: 700;
+            font-size: 14.5px;
+            padding: 4px 0;
+        }
+
+        summary::marker {
+            color: var(--blue);
+        }
+
+        footer {
+            padding: 30px 0 60px;
+            color: var(--sub);
+            font-size: 12.5px;
+            border-top: 1px solid var(--line);
+            margin-top: 20px;
+        }
+
+        .pill-row {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+            margin-top: 4px;
+        }
+
+        .pill {
+            font-size: 11px;
+            background: var(--gray-bg);
+            color: var(--sub);
+            border-radius: 999px;
+            padding: 2px 9px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <header class="hero">
+        <div class="wrap">
+            <div class="eyebrow">Task Tracker · Sprint Demo</div>
+            <h1>Task Tracker Demo — March 2 – March 9, 2026</h1>
+            <p class="hero-sub">A structured walkthrough of everything shipped to <strong>main</strong> across the API
+                service (BE) and the web app (FE) this week. A moderate week — one coupled FE+BE feature, one FE bug
+                fix, and three backend-only technical items.</p>
+            <div class="hero-meta">
+                <span>6 PROJ tickets</span>
+                <span>7 BE commits</span>
+                <span>4 FE commits</span>
+                <span>+2 alternate demo runs (PROJ-204)</span>
+                <span>Presenter: Presenter Name</span>
+            </div>
+            <a class="live-btn" href="https://demo.example.com/workspaces/acme/tasks" target="_blank"
+                rel="noopener">Open live demo environment →</a>
+        </div>
+    </header>
+
+    <nav class="toc">
+        <div class="wrap">
+            <a href="#summary">Today's Summary</a>
+            <a href="#path">1. Demo Path</a>
+            <a href="#backend">2. Backend-Only Changes</a>
+            <a href="#appendix">3. Full Commit Log</a>
+        </div>
+    </nav>
+
+    <div class="wrap">
+
+        <section id="stats">
+            <div class="stats">
+                <div class="stat">
+                    <div class="num">6</div>
+                    <div class="label">PROJ tickets this week</div>
+                </div>
+                <div class="stat">
+                    <div class="num">5</div>
+                    <div class="label">Screens updated (shared-link banner)</div>
+                </div>
+                <div class="stat">
+                    <div class="num">3</div>
+                    <div class="label">BE-only technical items</div>
+                </div>
+                <div class="stat">
+                    <div class="num">1</div>
+                    <div class="label">Live environment</div>
+                </div>
+            </div>
+        </section>
+
+        <section id="summary">
+            <h2>What We're Demoing Today</h2>
+            <p class="section-sub">Read this out loud before diving in — gives the audience a map of what's coming.</p>
+            <div class="card">
+                <ul class="talk" style="font-size:14.5px;">
+                    <li><span class="tix">PROJ-201</span> Task creation — the "Priority" dropdown now offers a
+                        "Critical" level, front end and back end.</li>
+                    <li><span class="tix">PROJ-203</span> The task list and 4 other screens now show a fixed-length
+                        "link expires" banner for shared links instead of one that reset on every click.</li>
+                    <li><span class="tix">PROJ-204</span> Workspace sharing — teammates invited by email can now accept
+                        an invitation and see the shared task board.</li>
+                    <li>Backend-only, mentioned but not clicked: a scheduled-job bug fix, a runtime/framework upgrade,
+                        and a dependency-security hygiene pass.</li>
+                </ul>
+            </div>
+        </section>
+
+        <section id="path">
+            <h2>1. Recommended Demo Path</h2>
+            <p class="section-sub">Follow this order top to bottom — it walks the user journey from sign-in down to the
+                screens that actually changed this week, plus two alternate runs demoing the new workspace-invitation
+                flow. Each step names the screen, its URL, which tickets it proves out, and exactly what to click/say.
+            </p>
+
+            <div class="card">
+                <span class="tag">Test data — three runs</span>
+                <h3>Use these exact values so nothing stalls mid-demo</h3>
+                <div class="grid2" style="margin-top:10px;">
+                    <div>
+                        <p style="margin:0 0 4px; font-weight:700; font-size:13.5px;">Run A — main flow (Steps 1–4)</p>
+                        <table style="margin-top:0;">
+                            <tr>
+                                <td style="font-weight:600; width:38%;">Workspace</td>
+                                <td>acme</td>
+                            </tr>
+                            <tr>
+                                <td style="font-weight:600;">User</td>
+                                <td class="mono">demo.user@example.com</td>
+                            </tr>
+                            <tr>
+                                <td style="font-weight:600;">Task title</td>
+                                <td>Prepare quarterly report</td>
+                            </tr>
+                            <tr>
+                                <td style="font-weight:600;">Due date</td>
+                                <td>Any date next week</td>
+                            </tr>
+                        </table>
+                    </div>
+                    <div>
+                        <p style="margin:0 0 4px; font-weight:700; font-size:13.5px;">Run B — invitation, new user (Step
+                            5)</p>
+                        <table style="margin-top:0;">
+                            <tr>
+                                <td style="font-weight:600; width:38%;">Invitee email</td>
+                                <td class="mono">new.member@example.com</td>
+                            </tr>
+                            <tr>
+                                <td style="font-weight:600;">Role</td>
+                                <td>Editor</td>
+                            </tr>
+                        </table>
+                    </div>
+                    <div>
+                        <p style="margin:0 0 4px; font-weight:700; font-size:13.5px;">Run C — invitation, existing user
+                            (Step 6)</p>
+                        <table style="margin-top:0;">
+                            <tr>
+                                <td style="font-weight:600; width:38%;">Invitee email</td>
+                                <td class="mono">demo.user2@example.com</td>
+                            </tr>
+                            <tr>
+                                <td style="font-weight:600;">Role</td>
+                                <td>Viewer</td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+                <div class="callout note" style="margin-top:8px;">The workspace <code>acme</code> is reused from the
+                    previous week's guide and was not re-verified against the demo environment this run — fixture
+                    workspaces can be reset or deactivated between demos (as happened with an earlier fixture that was
+                    archived and broke every scenario using it). Confirm the workspace is still active before
+                    presenting, or swap in whichever workspace the test-data helper currently resolves to.</div>
+            </div>
+
+            <div class="step">
+                <span class="step-num">1</span>
+                <div class="step-body">
+                    <p class="step-title">Sign in → Workspace home (Steps 1–2) — continuity only <span
+                            class="tix muted">no ticket this week</span></p>
+                    <span class="url">https://demo.example.com/workspaces/acme/tasks</span>
+                    <ul class="talk">
+                        <li>Sign in as <strong>demo.user@example.com</strong> — no ticket-specific changes on these
+                            screens this week, move through quickly.</li>
+                        <li>Open the "acme" workspace and click "New task."</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="step">
+                <span class="step-num">2</span>
+                <div class="step-body">
+                    <p class="step-title">Create task — add "Critical" priority <span class="badge b-fe">FE</span> <span
+                            class="badge b-be">BE</span> <span class="tix">PROJ-201</span></p>
+                    <span class="url">.../workspaces/acme/tasks/new</span>
+                    <ul class="talk">
+                        <li>Enter the title <strong>Prepare quarterly report</strong>, then open the "Priority"
+                            dropdown.</li>
+                        <li>Point out the list now has 4 options and includes <strong>"Critical"</strong> — it was added
+                            to both the dropdown and the underlying <code>Priority</code> enum.</li>
+                        <li>Select "Critical" and save.</li>
+                    </ul>
+                    <div class="callout note">Same-day backend companion commit: the API's own <code>Priority</code>
+                        enum and its request validator accept <code>CRITICAL</code> too, so the value is stored
+                        correctly instead of being rejected. Nothing separately visible to click for that half — it's
+                        the same ticket, just the API-contract side of the FE change above.</div>
+                </div>
+            </div>
+
+            <div class="step">
+                <span class="step-num">3</span>
+                <div class="step-body">
+                    <p class="step-title">Task detail → Comments (Step 3) — continuity only <span class="tix muted">no
+                            ticket this week</span></p>
+                    <span class="url">.../tasks/&lt;task-id&gt;&nbsp;→&nbsp;.../tasks/&lt;task-id&gt;/comments</span>
+                    <ul class="talk">
+                        <li>Task detail: confirm the task shows a red "Critical" badge.</li>
+                        <li>Comments: add any short comment, then go back to the task list.</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="step">
+                <span class="step-num">4</span>
+                <div class="step-body">
+                    <p class="step-title">Task list — fixed expiry on shared-link banner <span
+                            class="badge b-fe">FE</span> <span class="tix">PROJ-203</span></p>
+                    <span class="url">.../workspaces/acme/shared/&lt;share-token&gt;</span>
+                    <ul class="talk">
+                        <li>Filed as a <strong>bug</strong>, not a feature: the shared-link expiry countdown used to be
+                            idle-<em>reset</em> — every filter click or scroll pushed the expiry back out, so a shared
+                            link someone kept nudging could stay open indefinitely.</li>
+                        <li>It's now a <strong>fixed</strong> wall-clock timer: it starts once when the page loads and
+                            fires on schedule regardless of activity — applying a filter no longer resets it.</li>
+                    </ul>
+                    <div class="callout">The configured expiry on this environment is <strong>30 minutes</strong>
+                        (<code>sharedLinkTtlMs=1800000</code> in the environment config) — too long to wait for live.
+                        Don't wait: open a new tab and navigate straight to <span class="url"
+                            style="margin:0;">.../shared/expired</span> to show the screen a visitor lands on once it
+                        fires (it reads back the same 30-minute figure in its body copy) — then say the fixed timer
+                        behind it now fires automatically after 30 minutes, whether or not the visitor is interacting
+                        with the page.</div>
+                    <div class="callout note">The same fixed-timer fix was wired into 4 other shared-view screens in the
+                        same commit — same mechanism, nothing further to click: Board view, Calendar view, Task detail
+                        (shared), Activity feed.</div>
+                </div>
+            </div>
+
+            <div class="step">
+                <span class="step-num">5</span>
+                <div class="step-body">
+                    <p class="step-title">Alternate run — invite a new user to a workspace <span class="badge b-both">BE
+                            + FE</span> <span class="tix">PROJ-204</span></p>
+                    <span class="url">https://demo.example.com/workspaces/acme/members</span>
+                    <ul class="talk">
+                        <li>Open Members, click "Invite," and enter Run B's email with the Editor role.</li>
+                        <li>Open the invitation link from the test inbox — the invitee is asked to create an account
+                            first.</li>
+                        <li>After sign-up, the invitee lands on the shared task board, as an Editor.</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="step">
+                <span class="step-num">6</span>
+                <div class="step-body">
+                    <p class="step-title">Alternate run — invite an existing user <span class="badge b-both">BE +
+                            FE</span> <span class="tix">PROJ-204</span></p>
+                    <span class="url">https://demo.example.com/workspaces/acme/members</span>
+                    <ul class="talk">
+                        <li>Repeat the invitation with Run C's email and the Viewer role.</li>
+                        <li>Open the invitation link — the existing user signs in and goes straight to the shared board,
+                            as a Viewer, with no account-creation step.</li>
+                    </ul>
+                </div>
+            </div>
+
+        </section>
+
+        <section id="backend">
+            <h2>2. Backend-Only Changes to Narrate</h2>
+            <p class="section-sub">Not clickable in the UI, but worth calling out verbally — mostly platform/security
+                hygiene rather than user-facing behavior.</p>
+
+            <div class="card">
+                <span class="tag">PROJ-205 · Story · In Review</span>
+                <h3>Stop the reminder job from sending duplicate notifications</h3>
+                <p>The scheduled reminder job used to mark a task as "reminder queued" using the same state as "reminder
+                    sent" — so on its next run it could treat a queued reminder as not yet sent and enqueue it again. A
+                    new dedicated <code>REMINDER_QUEUED</code> state keeps the two apart, with a matching
+                    <code>REMINDER_FAILED</code> give-up if delivery is never confirmed in time.</p>
+            </div>
+
+            <div class="card">
+                <span class="tag">PROJ-206 · Story · In Review</span>
+                <h3>Platform upgrade: runtime, framework and build tool</h3>
+                <p>Major runtime, framework and build-tool version bump across the API service — touches HTTP client
+                    configuration, request/response models, and the build wrapper. No behavior change to call out live;
+                    worth a mention as a risk item if asked about platform currency.</p>
+            </div>
+
+            <div class="card">
+                <span class="tag">PROJ-207 · Sub-task · Done</span>
+                <h3>Dependency bump + vulnerability scan via an internal mirror</h3>
+                <p>A scheduler-locking library was bumped a major version, and the dependency-vulnerability scan task
+                    now points at an internal mirror of the vulnerability database instead of requiring a personal API
+                    key — unblocks the security scan from running reliably in CI. Build/security tooling only, nothing
+                    to click.</p>
+            </div>
+
+        </section>
+
+        <section id="appendix">
+            <h2>3. Full Commit Log (reference)</h2>
+            <p class="section-sub">Raw <code>git log origin/main</code> for both repos, Mar 2 00:00 → Mar 9 23:59. Kept
+                here for traceability, not meant to be read out loud. PROJ-208 (dead config cleanup) and the automated
+                version-bump commits are real but have zero behavior impact — listed here only.</p>
+
+            <details open>
+                <summary>task-tracker-api (BE) — 7 commits</summary>
+                <table>
+                    <tr>
+                        <th>SHA</th>
+                        <th>Date</th>
+                        <th>Author</th>
+                        <th>Message</th>
+                    </tr>
+                    <tr>
+                        <td class="mono">a1b2c3d</td>
+                        <td>03-08 17:05</td>
+                        <td>Dev A</td>
+                        <td>[PROJ-207] deps: bump scheduler lock library and enable vulnerability scan via mirror</td>
+                    </tr>
+                    <tr>
+                        <td class="mono">b2c3d4e</td>
+                        <td>03-08 09:54</td>
+                        <td>Dev A</td>
+                        <td>[PROJ-208] config: remove dead build property and stale pipeline files</td>
+                    </tr>
+                    <tr>
+                        <td class="mono">c3d4e5f</td>
+                        <td>03-05 18:41</td>
+                        <td>Dev B</td>
+                        <td>[PROJ-204] api: add workspace invitation endpoints</td>
+                    </tr>
+                    <tr>
+                        <td class="mono">d4e5f6a</td>
+                        <td>03-04 14:09</td>
+                        <td>Dev C</td>
+                        <td>[PROJ-205] api: stop reminder job from re-queuing queued reminders</td>
+                    </tr>
+                    <tr>
+                        <td class="mono">e5f6a7b</td>
+                        <td>03-04 12:26</td>
+                        <td>Dev A</td>
+                        <td>[PROJ-206] Update dependencies: runtime, framework and build tool</td>
+                    </tr>
+                    <tr>
+                        <td class="mono">f6a7b8c</td>
+                        <td>03-03 12:17</td>
+                        <td>Dev C</td>
+                        <td>[PROJ-201] api: accept CRITICAL as a supported priority value</td>
+                    </tr>
+                    <tr>
+                        <td class="mono">a7b8c9d</td>
+                        <td>03-02 11:03</td>
+                        <td>CI Pipeline</td>
+                        <td>[CI-100] Automated version update [ci-skip]</td>
+                    </tr>
+                </table>
+            </details>
+
+            <details open>
+                <summary>task-tracker-web (FE) — 4 commits</summary>
+                <table>
+                    <tr>
+                        <th>SHA</th>
+                        <th>Date</th>
+                        <th>Author</th>
+                        <th>Message</th>
+                    </tr>
+                    <tr>
+                        <td class="mono">b8c9d0e</td>
+                        <td>03-05 18:24</td>
+                        <td>Dev B</td>
+                        <td>[PROJ-204] ui: add invitation accept screens</td>
+                    </tr>
+                    <tr>
+                        <td class="mono">c9d0e1f</td>
+                        <td>03-04 12:10</td>
+                        <td>Dev C</td>
+                        <td>[PROJ-203] ui: add fixed expiry timer to shared-view screens</td>
+                    </tr>
+                    <tr>
+                        <td class="mono">d0e1f2a</td>
+                        <td>03-03 12:17</td>
+                        <td>Dev C</td>
+                        <td>[PROJ-201] ui: add Critical option to priority dropdown</td>
+                    </tr>
+                    <tr>
+                        <td class="mono">e1f2a3b</td>
+                        <td>03-02 11:01</td>
+                        <td>CI Pipeline</td>
+                        <td>[CI-101] Automated version update [ci-skip]</td>
+                    </tr>
+                </table>
+            </details>
+        </section>
+
+    </div>
+
+    <footer>
+        <div class="wrap">
+            Generated 2026-03-09 from <code>origin/main</code> in task-tracker-api and task-tracker-web,
+            cross-referenced against the issue tracker (PROJ project). Excludes CI version-bump and pure-chore commits
+            from the demo path — see the full log in Section 3 for those.
+        </div>
+    </footer>
+
+</body>
+
+</html>
